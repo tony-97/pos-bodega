@@ -1,0 +1,216 @@
+@page "/compras"
+@inject AuthService Auth
+@inject CompraService CompraSvc
+@inject ProveedorService ProveedorSvc
+@inject ProductoService ProductoSvc
+@inject NavigationManager Nav
+
+<div class="space-y-6">
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-surface-50">Compras</h1>
+            <p class="text-surface-400 text-sm mt-1">Registro de ingreso de mercadería</p>
+        </div>
+        <button @onclick="ShowForm" class="flex items-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-500 text-white rounded-xl font-medium text-sm transition-colors">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+            Nueva Compra
+        </button>
+    </div>
+
+    <!-- Purchase History -->
+    <div class="bg-surface-900 border border-surface-800 rounded-xl overflow-hidden">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-surface-800 bg-surface-900/50">
+                    <th class="text-left py-3 px-4 text-surface-400 font-medium">Fecha</th>
+                    <th class="text-left py-3 px-4 text-surface-400 font-medium">Proveedor</th>
+                    <th class="text-left py-3 px-4 text-surface-400 font-medium">Usuario</th>
+                    <th class="text-right py-3 px-4 text-surface-400 font-medium">Productos</th>
+                    <th class="text-right py-3 px-4 text-surface-400 font-medium">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var c in compras)
+                {
+                    <tr class="border-b border-surface-800/50 hover:bg-surface-800/30 transition-colors">
+                        <td class="py-3 px-4 text-surface-300">@c.Fecha.ToString("dd/MM/yyyy HH:mm")</td>
+                        <td class="py-3 px-4 text-surface-200 font-medium">@c.Proveedor.Nombre</td>
+                        <td class="py-3 px-4 text-surface-400">@c.Usuario.Nombre</td>
+                        <td class="py-3 px-4 text-right text-surface-400">@c.Detalles.Count</td>
+                        <td class="py-3 px-4 text-right text-surface-200 font-mono font-medium">S/ @c.Total.ToString("N2")</td>
+                    </tr>
+                }
+                @if (compras.Count == 0)
+                {
+                    <tr><td colspan="5" class="py-8 text-center text-surface-500">No hay compras registradas</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- New Purchase Modal -->
+    @if (showForm)
+    {
+        <div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" @onclick="() => showForm = false">
+            <div class="bg-surface-900 border border-surface-700 rounded-2xl w-full max-w-2xl shadow-2xl max-h-[90vh] overflow-y-auto" @onclick:stopPropagation>
+                <div class="p-6 border-b border-surface-800">
+                    <h3 class="text-lg font-semibold text-surface-100">Registrar Compra</h3>
+                </div>
+                <div class="p-6 space-y-4">
+                    <div>
+                        <label class="block text-sm text-surface-300 mb-1.5">Proveedor *</label>
+                        <select @bind="selectedProveedorId" class="w-full px-3 py-2.5 bg-surface-800 border border-surface-700 rounded-xl text-surface-100 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/50">
+                            <option value="0">-- Seleccione --</option>
+                            @foreach (var p in proveedores)
+                            {
+                                <option value="@p.Id">@p.Nombre</option>
+                            }
+                        </select>
+                    </div>
+
+                    <!-- Add product line -->
+                    <div class="p-4 bg-surface-800/50 rounded-xl space-y-3">
+                        <p class="text-sm font-medium text-surface-300">Agregar Producto</p>
+                        <div class="grid grid-cols-12 gap-2">
+                            <div class="col-span-5">
+                                <select @bind="lineProductoId" class="w-full px-3 py-2 bg-surface-800 border border-surface-700 rounded-lg text-surface-100 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500/50">
+                                    <option value="0">Producto</option>
+                                    @foreach (var p in productos)
+                                    {
+                                        <option value="@p.Id">@p.Nombre</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-span-2">
+                                <input type="number" @bind="lineCantidad" min="0.01" step="0.01" placeholder="Cant."
+                                       class="w-full px-3 py-2 bg-surface-800 border border-surface-700 rounded-lg text-surface-100 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500/50" />
+                            </div>
+                            <div class="col-span-3">
+                                <input type="number" @bind="lineCosto" min="0.01" step="0.01" placeholder="Costo unit."
+                                       class="w-full px-3 py-2 bg-surface-800 border border-surface-700 rounded-lg text-surface-100 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500/50" />
+                            </div>
+                            <div class="col-span-2">
+                                <button @onclick="AddLine" class="w-full py-2 bg-primary-600 hover:bg-primary-500 text-white rounded-lg text-sm font-medium transition-colors">
+                                    Agregar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Lines table -->
+                    @if (detalles.Count > 0)
+                    {
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="border-b border-surface-800">
+                                    <th class="text-left py-2 text-surface-400 font-medium">Producto</th>
+                                    <th class="text-right py-2 text-surface-400 font-medium">Cant.</th>
+                                    <th class="text-right py-2 text-surface-400 font-medium">Costo</th>
+                                    <th class="text-right py-2 text-surface-400 font-medium">Subtotal</th>
+                                    <th class="w-8"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var d in detalles)
+                                {
+                                    <tr class="border-b border-surface-800/50">
+                                        <td class="py-2 text-surface-200">@productos.FirstOrDefault(p => p.Id == d.ProductoId)?.Nombre</td>
+                                        <td class="py-2 text-right text-surface-300 font-mono">@d.Cantidad</td>
+                                        <td class="py-2 text-right text-surface-300 font-mono">S/ @d.CostoUnitario.ToString("N2")</td>
+                                        <td class="py-2 text-right text-surface-200 font-mono font-medium">S/ @d.Subtotal.ToString("N2")</td>
+                                        <td class="py-2">
+                                            <button @onclick="() => detalles.Remove(d)" class="p-1 text-surface-600 hover:text-rose-400">
+                                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot>
+                                <tr class="border-t border-surface-700">
+                                    <td colspan="3" class="py-3 text-right font-medium text-surface-300">Total:</td>
+                                    <td class="py-3 text-right text-lg font-bold text-surface-50 font-mono">S/ @detalles.Sum(d => d.Subtotal).ToString("N2")</td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    }
+
+                    @if (!string.IsNullOrEmpty(formError))
+                    {
+                        <div class="p-2.5 bg-rose-500/10 border border-rose-500/20 rounded-lg text-rose-400 text-xs">@formError</div>
+                    }
+                </div>
+                <div class="p-6 border-t border-surface-800 flex justify-end gap-3">
+                    <button @onclick="() => showForm = false" class="px-4 py-2 text-sm text-surface-400">Cancelar</button>
+                    <button @onclick="SaveCompra" class="px-5 py-2 bg-primary-600 hover:bg-primary-500 text-white rounded-xl text-sm font-medium transition-colors">
+                        Registrar Compra
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<Compra> compras = new();
+    private List<Proveedor> proveedores = new();
+    private List<Producto> productos = new();
+    private bool showForm;
+    private int selectedProveedorId;
+    private List<CompraDetalle> detalles = new();
+    private int lineProductoId;
+    private decimal lineCantidad = 1;
+    private decimal lineCosto;
+    private string? formError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!Auth.IsAdmin) { Nav.NavigateTo("/pos"); return; }
+        await Load();
+    }
+
+    private async Task Load()
+    {
+        compras = await CompraSvc.GetAllAsync();
+        proveedores = await ProveedorSvc.GetAllAsync();
+        productos = await ProductoSvc.GetAllAsync();
+    }
+
+    private void ShowForm()
+    {
+        detalles = new(); selectedProveedorId = 0; formError = null;
+        lineProductoId = 0; lineCantidad = 1; lineCosto = 0;
+        showForm = true;
+    }
+
+    private void AddLine()
+    {
+        if (lineProductoId == 0 || lineCantidad <= 0 || lineCosto <= 0) return;
+        detalles.Add(new CompraDetalle
+        {
+            ProductoId = lineProductoId,
+            Cantidad = lineCantidad,
+            CostoUnitario = lineCosto,
+            Subtotal = lineCantidad * lineCosto
+        });
+        lineProductoId = 0; lineCantidad = 1; lineCosto = 0;
+    }
+
+    private async Task SaveCompra()
+    {
+        formError = null;
+        if (selectedProveedorId == 0) { formError = "Seleccione un proveedor."; return; }
+        if (detalles.Count == 0) { formError = "Agregue al menos un producto."; return; }
+
+        var compra = new Compra
+        {
+            ProveedorId = selectedProveedorId,
+            UsuarioId = Auth.CurrentUser!.Id
+        };
+
+        await CompraSvc.RegistrarCompraAsync(compra, detalles);
+        await Load();
+        showForm = false;
+    }
+}

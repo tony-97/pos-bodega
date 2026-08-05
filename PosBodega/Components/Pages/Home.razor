@@ -1,5 +1,203 @@
-﻿@page "/"
+@page "/"
+@inject AuthService Auth
+@inject ReporteService ReporteSvc
+@inject ProductoService ProductoSvc
+@inject NavigationManager Nav
 
-<h1>Hello, world!</h1>
+<div class="space-y-6">
+    <!-- Header -->
+    <div>
+        <h1 class="text-2xl font-bold text-surface-50">Dashboard</h1>
+        <p class="text-surface-400 text-sm mt-1">Resumen del día — @DateTime.Now.ToString("dddd, dd MMMM yyyy")</p>
+    </div>
 
-Welcome to your new app.
+    @if (resumen != null)
+    {
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Ventas del día -->
+            <div class="bg-surface-900 border border-surface-800 rounded-xl p-5 hover:border-surface-700 transition-colors">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="w-10 h-10 rounded-lg bg-primary-500/10 flex items-center justify-center">
+                        <svg class="w-5 h-5 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z" />
+                        </svg>
+                    </div>
+                    <span class="text-xs font-medium text-surface-500">Hoy</span>
+                </div>
+                <p class="text-2xl font-bold text-surface-50">@resumen.VentasDelDia</p>
+                <p class="text-sm text-surface-400 mt-1">ventas realizadas</p>
+            </div>
+
+            <!-- Total ventas S/ -->
+            <div class="bg-surface-900 border border-surface-800 rounded-xl p-5 hover:border-surface-700 transition-colors">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                        <svg class="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                        </svg>
+                    </div>
+                    <span class="text-xs font-medium text-surface-500">Ingresos</span>
+                </div>
+                <p class="text-2xl font-bold text-surface-50">S/ @resumen.TotalVentasDelDia.ToString("N2")</p>
+                <p class="text-sm text-surface-400 mt-1">total del día</p>
+            </div>
+
+            <!-- Stock bajo -->
+            <div class="bg-surface-900 border border-surface-800 rounded-xl p-5 hover:border-surface-700 transition-colors cursor-pointer"
+                 @onclick='() => Nav.NavigateTo("/productos")'>
+                <div class="flex items-center justify-between mb-3">
+                    <div class="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                        <svg class="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+                        </svg>
+                    </div>
+                    <span class="text-xs font-medium text-amber-400">⚠ Alerta</span>
+                </div>
+                <p class="text-2xl font-bold text-surface-50">@resumen.ProductosStockBajo</p>
+                <p class="text-sm text-surface-400 mt-1">productos con stock bajo</p>
+            </div>
+
+            <!-- Fiados pendientes -->
+            <div class="bg-surface-900 border border-surface-800 rounded-xl p-5 hover:border-surface-700 transition-colors cursor-pointer"
+                 @onclick='() => Nav.NavigateTo("/fiados")'>
+                <div class="flex items-center justify-between mb-3">
+                    <div class="w-10 h-10 rounded-lg bg-rose-500/10 flex items-center justify-center">
+                        <svg class="w-5 h-5 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Z" />
+                        </svg>
+                    </div>
+                    <span class="text-xs font-medium text-surface-500">Cuentas</span>
+                </div>
+                <p class="text-2xl font-bold text-surface-50">S/ @resumen.TotalFiados.ToString("N2")</p>
+                <p class="text-sm text-surface-400 mt-1">cuentas por cobrar</p>
+            </div>
+        </div>
+
+        <!-- Quick Actions + Low Stock -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Quick Actions -->
+            <div class="bg-surface-900 border border-surface-800 rounded-xl p-6">
+                <h2 class="text-lg font-semibold text-surface-100 mb-4">Acciones Rápidas</h2>
+                <div class="space-y-3">
+                    <button @onclick='() => Nav.NavigateTo("/pos")'
+                            class="w-full flex items-center gap-3 p-3 rounded-lg bg-primary-600/10 border border-primary-500/20 text-primary-400 hover:bg-primary-600/20 transition-colors">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z" />
+                        </svg>
+                        <span class="font-medium">Nueva Venta</span>
+                    </button>
+                    <button @onclick='() => Nav.NavigateTo("/compras")'
+                            class="w-full flex items-center gap-3 p-3 rounded-lg bg-surface-800 border border-surface-700 text-surface-300 hover:bg-surface-700 transition-colors">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 3.75H6.912a2.25 2.25 0 0 0-2.15 1.588L2.35 13.177a2.25 2.25 0 0 0-.1.661V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 0 0-2.15-1.588H15M2.25 13.5h3.86a2.25 2.25 0 0 1 2.012 1.244l.256.512a2.25 2.25 0 0 0 2.013 1.244h3.218a2.25 2.25 0 0 0 2.013-1.244l.256-.512a2.25 2.25 0 0 1 2.013-1.244h3.859M12 3v8.25m0 0-3-3m3 3 3-3" />
+                        </svg>
+                        <span class="font-medium">Registrar Compra</span>
+                    </button>
+                    <button @onclick='() => Nav.NavigateTo("/fiados")'
+                            class="w-full flex items-center gap-3 p-3 rounded-lg bg-surface-800 border border-surface-700 text-surface-300 hover:bg-surface-700 transition-colors">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Z" />
+                        </svg>
+                        <span class="font-medium">Gestionar Fiados</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Low Stock Alert Table -->
+            <div class="lg:col-span-2 bg-surface-900 border border-surface-800 rounded-xl p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold text-surface-100">Productos con Stock Bajo</h2>
+                    @if (lowStockProducts.Count > 0)
+                    {
+                        <span class="px-2.5 py-1 text-xs font-medium rounded-full bg-amber-500/10 text-amber-400">
+                            @lowStockProducts.Count productos
+                        </span>
+                    }
+                </div>
+
+                @if (lowStockProducts.Count == 0)
+                {
+                    <div class="flex flex-col items-center justify-center py-8 text-surface-500">
+                        <svg class="w-12 h-12 mb-3 text-surface-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                        </svg>
+                        <p class="text-sm">Todos los productos tienen stock suficiente</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="border-b border-surface-800">
+                                    <th class="text-left py-3 px-3 text-surface-400 font-medium">Producto</th>
+                                    <th class="text-left py-3 px-3 text-surface-400 font-medium">Categoría</th>
+                                    <th class="text-right py-3 px-3 text-surface-400 font-medium">Stock Actual</th>
+                                    <th class="text-right py-3 px-3 text-surface-400 font-medium">Stock Mínimo</th>
+                                    <th class="text-center py-3 px-3 text-surface-400 font-medium">Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var p in lowStockProducts.Take(10))
+                                {
+                                    <tr class="border-b border-surface-800/50 hover:bg-surface-800/30 transition-colors">
+                                        <td class="py-3 px-3 text-surface-200 font-medium">@p.Nombre</td>
+                                        <td class="py-3 px-3 text-surface-400">@p.Categoria.Nombre</td>
+                                        <td class="py-3 px-3 text-right font-mono">
+                                            <span class="@(p.StockActual == 0 ? "text-rose-400" : "text-amber-400")">
+                                                @p.StockActual
+                                            </span>
+                                        </td>
+                                        <td class="py-3 px-3 text-right text-surface-400 font-mono">@p.StockMinimo</td>
+                                        <td class="py-3 px-3 text-center">
+                                            @if (p.StockActual == 0)
+                                            {
+                                                <span class="px-2 py-0.5 text-xs rounded-full bg-rose-500/10 text-rose-400">Agotado</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="px-2 py-0.5 text-xs rounded-full bg-amber-500/10 text-amber-400">Bajo</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+    else
+    {
+        <!-- Loading skeleton -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            @for (int i = 0; i < 4; i++)
+            {
+                <div class="bg-surface-900 border border-surface-800 rounded-xl p-5 animate-pulse">
+                    <div class="h-10 w-10 bg-surface-800 rounded-lg mb-3"></div>
+                    <div class="h-8 w-20 bg-surface-800 rounded mb-2"></div>
+                    <div class="h-4 w-32 bg-surface-800 rounded"></div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private ResumenDiario? resumen;
+    private List<Producto> lowStockProducts = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!Auth.IsAdmin)
+        {
+            Nav.NavigateTo("/pos");
+            return;
+        }
+
+        resumen = await ReporteSvc.GetResumenDiarioAsync();
+        lowStockProducts = await ProductoSvc.GetLowStockAsync();
+    }
+}

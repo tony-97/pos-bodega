@@ -1,0 +1,149 @@
+@page "/reportes"
+@inject AuthService Auth
+@inject ReporteService ReporteSvc
+@inject NavigationManager Nav
+
+<div class="space-y-6">
+    <div>
+        <h1 class="text-2xl font-bold text-surface-50">Reportes</h1>
+        <p class="text-surface-400 text-sm mt-1">Análisis de ventas y rendimiento del negocio</p>
+    </div>
+
+    <!-- Date range selector -->
+    <div class="flex items-end gap-4 bg-surface-900 border border-surface-800 rounded-xl p-4">
+        <div>
+            <label class="block text-xs text-surface-500 mb-1">Desde</label>
+            <input type="date" @bind="fechaDesde" class="px-3 py-2 bg-surface-800 border border-surface-700 rounded-lg text-surface-100 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500" />
+        </div>
+        <div>
+            <label class="block text-xs text-surface-500 mb-1">Hasta</label>
+            <input type="date" @bind="fechaHasta" class="px-3 py-2 bg-surface-800 border border-surface-700 rounded-lg text-surface-100 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500" />
+        </div>
+        <button @onclick="LoadReports" class="px-5 py-2 bg-primary-600 hover:bg-primary-500 text-white rounded-lg text-sm font-medium transition-colors">
+            Generar Reportes
+        </button>
+    </div>
+
+    @if (loaded)
+    {
+        <!-- Summary cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-surface-900 border border-surface-800 rounded-xl p-5">
+                <p class="text-sm text-surface-400 mb-1">Total Ventas</p>
+                <p class="text-2xl font-bold text-surface-50">@ventas.Count</p>
+                <p class="text-sm text-surface-500 mt-1">transacciones</p>
+            </div>
+            <div class="bg-surface-900 border border-surface-800 rounded-xl p-5">
+                <p class="text-sm text-surface-400 mb-1">Ingresos</p>
+                <p class="text-2xl font-bold text-emerald-400">S/ @ganancia.Ingresos.ToString("N2")</p>
+                <p class="text-sm text-surface-500 mt-1">ventas brutas</p>
+            </div>
+            <div class="bg-surface-900 border border-surface-800 rounded-xl p-5">
+                <p class="text-sm text-surface-400 mb-1">Ganancia Bruta</p>
+                <p class="text-2xl font-bold @(ganancia.Ganancia >= 0 ? "text-emerald-400" : "text-rose-400")">S/ @ganancia.Ganancia.ToString("N2")</p>
+                <p class="text-sm text-surface-500 mt-1">ingresos - costos</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Top products -->
+            <div class="bg-surface-900 border border-surface-800 rounded-xl p-6">
+                <h2 class="text-lg font-semibold text-surface-100 mb-4">Productos Más Vendidos</h2>
+                @if (topProductos.Count > 0)
+                {
+                    <div class="space-y-3">
+                        @for (int i = 0; i < topProductos.Count; i++)
+                        {
+                            var p = topProductos[i];
+                            var maxQty = topProductos.First().CantidadVendida;
+                            var barWidth = maxQty > 0 ? (double)(p.CantidadVendida / maxQty * 100) : 0;
+                            <div>
+                                <div class="flex items-center justify-between mb-1">
+                                    <span class="text-sm text-surface-200">
+                                        <span class="text-surface-500 mr-2">#@(i + 1)</span> @p.ProductoNombre
+                                    </span>
+                                    <span class="text-sm font-mono text-surface-400">@p.CantidadVendida unid. — S/ @p.TotalVendido.ToString("N2")</span>
+                                </div>
+                                <div class="w-full bg-surface-800 rounded-full h-2">
+                                    <div class="h-2 rounded-full bg-gradient-to-r from-primary-600 to-primary-400" style="width: @barWidth%"></div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <p class="text-center py-6 text-surface-500 text-sm">No hay datos para el periodo seleccionado</p>
+                }
+            </div>
+
+            <!-- Sales list -->
+            <div class="bg-surface-900 border border-surface-800 rounded-xl p-6">
+                <h2 class="text-lg font-semibold text-surface-100 mb-4">Detalle de Ventas</h2>
+                <div class="max-h-96 overflow-y-auto">
+                    @if (ventas.Count > 0)
+                    {
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="border-b border-surface-800">
+                                    <th class="text-left py-2 text-surface-400 font-medium">Fecha</th>
+                                    <th class="text-left py-2 text-surface-400 font-medium">Vendedor</th>
+                                    <th class="text-center py-2 text-surface-400 font-medium">Pago</th>
+                                    <th class="text-right py-2 text-surface-400 font-medium">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var v in ventas)
+                                {
+                                    <tr class="border-b border-surface-800/50">
+                                        <td class="py-2 text-surface-300 text-xs">@v.Fecha.ToString("dd/MM HH:mm")</td>
+                                        <td class="py-2 text-surface-400">@v.Usuario.Nombre</td>
+                                        <td class="py-2 text-center">
+                                            <span class="px-2 py-0.5 text-xs rounded-full @GetPaymentBadge(v.MetodoPago)">@v.MetodoPago</span>
+                                        </td>
+                                        <td class="py-2 text-right text-surface-200 font-mono">S/ @v.Total.ToString("N2")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                    else
+                    {
+                        <p class="text-center py-6 text-surface-500 text-sm">No hay ventas en el periodo seleccionado</p>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private DateTime fechaDesde = DateTime.Today.AddDays(-30);
+    private DateTime fechaHasta = DateTime.Today;
+    private List<Venta> ventas = new();
+    private List<ProductoVendido> topProductos = new();
+    private GananciaBruta ganancia = new();
+    private bool loaded;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!Auth.IsAdmin) { Nav.NavigateTo("/pos"); return; }
+        await LoadReports();
+    }
+
+    private async Task LoadReports()
+    {
+        ventas = await ReporteSvc.GetVentasPorRangoAsync(fechaDesde, fechaHasta);
+        topProductos = await ReporteSvc.GetProductosMasVendidosAsync(fechaDesde, fechaHasta);
+        ganancia = await ReporteSvc.GetGananciaBrutaAsync(fechaDesde, fechaHasta);
+        loaded = true;
+    }
+
+    private string GetPaymentBadge(MetodoPago m) => m switch
+    {
+        MetodoPago.Efectivo => "bg-emerald-500/10 text-emerald-400",
+        MetodoPago.YapePlin => "bg-purple-500/10 text-purple-400",
+        MetodoPago.Tarjeta => "bg-blue-500/10 text-blue-400",
+        _ => "bg-surface-700 text-surface-400"
+    };
+}

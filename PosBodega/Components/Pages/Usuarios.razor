@@ -1,0 +1,210 @@
+@page "/usuarios"
+@inject AuthService Auth
+@inject UsuarioService UsuarioSvc
+@inject NavigationManager Nav
+
+<div class="space-y-6">
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-surface-50">Usuarios</h1>
+            <p class="text-surface-400 text-sm mt-1">Gestión de acceso al sistema</p>
+        </div>
+        <button @onclick="ShowCreate" class="flex items-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-500 text-white rounded-xl font-medium text-sm transition-colors">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+            Nuevo Usuario
+        </button>
+    </div>
+
+    <div class="bg-surface-900 border border-surface-800 rounded-xl overflow-hidden">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-surface-800 bg-surface-900/50">
+                    <th class="text-left py-3 px-4 text-surface-400 font-medium">Nombre</th>
+                    <th class="text-left py-3 px-4 text-surface-400 font-medium">Usuario</th>
+                    <th class="text-center py-3 px-4 text-surface-400 font-medium">Rol</th>
+                    <th class="text-center py-3 px-4 text-surface-400 font-medium">Estado</th>
+                    <th class="text-left py-3 px-4 text-surface-400 font-medium">Creado</th>
+                    <th class="text-center py-3 px-4 text-surface-400 font-medium">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var u in usuarios)
+                {
+                    <tr class="border-b border-surface-800/50 hover:bg-surface-800/30 transition-colors">
+                        <td class="py-3 px-4 text-surface-200 font-medium">@u.Nombre</td>
+                        <td class="py-3 px-4 text-surface-400 font-mono">@u.NombreUsuario</td>
+                        <td class="py-3 px-4 text-center">
+                            <span class="px-2.5 py-0.5 text-xs rounded-full @(u.Rol == Rol.Administrador ? "bg-amber-500/10 text-amber-400" : "bg-primary-500/10 text-primary-400")">
+                                @u.Rol
+                            </span>
+                        </td>
+                        <td class="py-3 px-4 text-center">
+                            <span class="px-2 py-0.5 text-xs rounded-full @(u.Activo ? "bg-emerald-500/10 text-emerald-400" : "bg-surface-700 text-surface-500")">
+                                @(u.Activo ? "Activo" : "Inactivo")
+                            </span>
+                        </td>
+                        <td class="py-3 px-4 text-surface-500 text-xs">@u.FechaCreacion.ToString("dd/MM/yyyy")</td>
+                        <td class="py-3 px-4 text-center">
+                            <div class="flex items-center justify-center gap-1">
+                                <button @onclick="() => ShowEdit(u)" class="p-1.5 text-surface-500 hover:text-primary-400 transition-colors" title="Editar">
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" /></svg>
+                                </button>
+                                <button @onclick="() => ShowChangePassword(u)" class="p-1.5 text-surface-500 hover:text-amber-400 transition-colors" title="Cambiar contraseña">
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 0 1 3 3m3 0a6 6 0 0 1-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1 1 21.75 8.25Z" /></svg>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Create/Edit Modal -->
+    @if (showModal)
+    {
+        <div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" @onclick="CloseModal">
+            <div class="bg-surface-900 border border-surface-700 rounded-2xl w-full max-w-md shadow-2xl" @onclick:stopPropagation>
+                <div class="p-6 border-b border-surface-800">
+                    <h3 class="text-lg font-semibold text-surface-100">@modalTitle</h3>
+                </div>
+                <div class="p-6 space-y-4">
+                    @if (modalMode == "create")
+                    {
+                        <div>
+                            <label class="block text-sm text-surface-300 mb-1.5">Nombre completo *</label>
+                            <input type="text" @bind="newNombre" class="w-full px-3 py-2.5 bg-surface-800 border border-surface-700 rounded-xl text-surface-100 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/50" />
+                        </div>
+                        <div>
+                            <label class="block text-sm text-surface-300 mb-1.5">Nombre de usuario *</label>
+                            <input type="text" @bind="newUsername" class="w-full px-3 py-2.5 bg-surface-800 border border-surface-700 rounded-xl text-surface-100 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/50" />
+                        </div>
+                        <div>
+                            <label class="block text-sm text-surface-300 mb-1.5">Contraseña *</label>
+                            <input type="password" @bind="newPassword" class="w-full px-3 py-2.5 bg-surface-800 border border-surface-700 rounded-xl text-surface-100 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/50" />
+                        </div>
+                        <div>
+                            <label class="block text-sm text-surface-300 mb-1.5">Rol *</label>
+                            <select @bind="newRol" class="w-full px-3 py-2.5 bg-surface-800 border border-surface-700 rounded-xl text-surface-100 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/50">
+                                <option value="@Rol.Vendedor">Vendedor</option>
+                                <option value="@Rol.Administrador">Administrador</option>
+                            </select>
+                        </div>
+                    }
+                    else if (modalMode == "edit")
+                    {
+                        <div>
+                            <label class="block text-sm text-surface-300 mb-1.5">Nombre completo</label>
+                            <input type="text" @bind="editNombre" class="w-full px-3 py-2.5 bg-surface-800 border border-surface-700 rounded-xl text-surface-100 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/50" />
+                        </div>
+                        <div>
+                            <label class="block text-sm text-surface-300 mb-1.5">Rol</label>
+                            <select @bind="editRol" class="w-full px-3 py-2.5 bg-surface-800 border border-surface-700 rounded-xl text-surface-100 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/50">
+                                <option value="@Rol.Vendedor">Vendedor</option>
+                                <option value="@Rol.Administrador">Administrador</option>
+                            </select>
+                        </div>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" @bind="editActivo" class="w-4 h-4 rounded border-surface-600 bg-surface-800 text-primary-500" />
+                            <span class="text-sm text-surface-300">Cuenta activa</span>
+                        </label>
+                    }
+                    else if (modalMode == "password")
+                    {
+                        <div>
+                            <label class="block text-sm text-surface-300 mb-1.5">Nueva contraseña *</label>
+                            <input type="password" @bind="changePassword" class="w-full px-3 py-2.5 bg-surface-800 border border-surface-700 rounded-xl text-surface-100 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/50" />
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(formError))
+                    {
+                        <div class="p-2.5 bg-rose-500/10 border border-rose-500/20 rounded-lg text-rose-400 text-xs">@formError</div>
+                    }
+                </div>
+                <div class="p-6 border-t border-surface-800 flex justify-end gap-3">
+                    <button @onclick="CloseModal" class="px-4 py-2 text-sm text-surface-400">Cancelar</button>
+                    <button @onclick="SaveAction" class="px-5 py-2 bg-primary-600 hover:bg-primary-500 text-white rounded-xl text-sm font-medium transition-colors">Guardar</button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<Usuario> usuarios = new();
+    private bool showModal;
+    private string modalMode = "";
+    private string modalTitle = "";
+    private string? formError;
+    private int editUserId;
+
+    // Create fields
+    private string newNombre = "", newUsername = "", newPassword = "";
+    private Rol newRol = Rol.Vendedor;
+
+    // Edit fields
+    private string editNombre = "";
+    private Rol editRol;
+    private bool editActivo;
+
+    // Password change
+    private string changePassword = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!Auth.IsAdmin) { Nav.NavigateTo("/pos"); return; }
+        await Load();
+    }
+
+    private async Task Load() => usuarios = await UsuarioSvc.GetAllAsync();
+
+    private void ShowCreate()
+    {
+        modalMode = "create"; modalTitle = "Nuevo Usuario";
+        newNombre = ""; newUsername = ""; newPassword = ""; newRol = Rol.Vendedor;
+        formError = null; showModal = true;
+    }
+
+    private void ShowEdit(Usuario u)
+    {
+        modalMode = "edit"; modalTitle = "Editar Usuario";
+        editUserId = u.Id; editNombre = u.Nombre; editRol = u.Rol; editActivo = u.Activo;
+        formError = null; showModal = true;
+    }
+
+    private void ShowChangePassword(Usuario u)
+    {
+        modalMode = "password"; modalTitle = $"Cambiar Contraseña — {u.NombreUsuario}";
+        editUserId = u.Id; changePassword = "";
+        formError = null; showModal = true;
+    }
+
+    private void CloseModal() => showModal = false;
+
+    private async Task SaveAction()
+    {
+        formError = null;
+        string? error = null;
+
+        switch (modalMode)
+        {
+            case "create":
+                if (string.IsNullOrWhiteSpace(newNombre) || string.IsNullOrWhiteSpace(newUsername) || string.IsNullOrWhiteSpace(newPassword))
+                { formError = "Todos los campos son obligatorios."; return; }
+                error = await UsuarioSvc.CreateAsync(newNombre, newUsername, newPassword, newRol);
+                break;
+            case "edit":
+                error = await UsuarioSvc.UpdateAsync(editUserId, editNombre, editRol, editActivo);
+                break;
+            case "password":
+                if (string.IsNullOrWhiteSpace(changePassword))
+                { formError = "Ingrese la nueva contraseña."; return; }
+                error = await UsuarioSvc.ChangePasswordAsync(editUserId, changePassword);
+                break;
+        }
+
+        if (error != null) { formError = error; return; }
+        await Load(); showModal = false;
+    }
+}

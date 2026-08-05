@@ -1,4 +1,6 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
+using PosBodega.Data;
+using PosBodega.Services;
 
 namespace PosBodega;
 
@@ -21,6 +23,30 @@ public static class MauiProgram
 		builder.Logging.AddDebug();
 #endif
 
-		return builder.Build();
+		// Database
+		builder.Services.AddSingleton<AppDbContext>();
+
+		// Services - Singleton for desktop app (single user session)
+		builder.Services.AddSingleton<AuthService>();
+		builder.Services.AddSingleton<CategoriaService>();
+		builder.Services.AddSingleton<ProductoService>();
+		builder.Services.AddSingleton<ProveedorService>();
+		builder.Services.AddSingleton<CompraService>();
+		builder.Services.AddSingleton<VentaService>();
+		builder.Services.AddSingleton<ClienteService>();
+		builder.Services.AddSingleton<PagoFiadoService>();
+		builder.Services.AddSingleton<ReporteService>();
+		builder.Services.AddSingleton<UsuarioService>();
+
+		var app = builder.Build();
+
+		// Ensure database is created with seed data on first run
+		using (var scope = app.Services.CreateScope())
+		{
+			var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+			db.Database.EnsureCreated();
+		}
+
+		return app;
 	}
 }
