@@ -31,6 +31,20 @@
     --color-surface-950: oklch(0.13 0.02 260);
 }
 
+/* Ensure full-size rendering in MAUI BlazorWebView */
+html, body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+#app {
+    width: 100%;
+    height: 100%;
+}
+
 /* Scrollbar styling for dark theme */
 ::-webkit-scrollbar {
     width: 6px;
