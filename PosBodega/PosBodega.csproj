@@ -89,4 +89,13 @@
     />
     <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
   </ItemGroup>
+  <!-- Automatically install npm packages and compile Tailwind before the app builds -->
+  <Target Name="TailwindAutomation" BeforeTargets="BeforeBuild">
+    <!-- 1. Ensure Node modules are installed if package.json exists -->
+    <Exec Condition="Exists('package.json') AND !Exists('node_modules')" Command="npm install" />
+
+    <!-- 2. Run the Tailwind compiler to generate the final CSS file -->
+    <Message Importance="high" Text="Building Tailwind CSS..." />
+    <Exec Command="npx @tailwindcss/cli -i ./Styles/app.css -o ./wwwroot/app.css --minify" />
+  </Target>
 </Project>
