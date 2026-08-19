@@ -40,11 +40,11 @@ public static class MauiProgram
 
 		var app = builder.Build();
 
-		// Ensure database is created with seed data on first run
+		// Ensure database is created and initialized with seed data
 		using (var scope = app.Services.CreateScope())
 		{
 			var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-			db.Database.EnsureCreated();
+			DbInitializer.Initialize(db);
 		}
 
 		return app;
