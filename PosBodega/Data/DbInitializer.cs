@@ -22,6 +22,35 @@ public static class DbInitializer
         }
         catch { /* Column already exists */ }
 
+        // Ventas new columns
+        var ventaColumns = new[]
+        {
+            "ALTER TABLE Ventas ADD COLUMN Serie TEXT;",
+            "ALTER TABLE Ventas ADD COLUMN Numero INTEGER DEFAULT 0;",
+            "ALTER TABLE Ventas ADD COLUMN NumeroComprobante TEXT;",
+            "ALTER TABLE Ventas ADD COLUMN Estado INTEGER DEFAULT 0;",
+            "ALTER TABLE Ventas ADD COLUMN ClienteNombre TEXT;",
+            "ALTER TABLE Ventas ADD COLUMN ClienteTipoDocumento INTEGER DEFAULT 0;",
+            "ALTER TABLE Ventas ADD COLUMN ClienteDocumento TEXT;",
+            "ALTER TABLE Ventas ADD COLUMN ClienteDireccion TEXT;",
+            "ALTER TABLE Ventas ADD COLUMN Subtotal TEXT DEFAULT '0';",
+            "ALTER TABLE Ventas ADD COLUMN Igv TEXT DEFAULT '0';",
+            "ALTER TABLE Ventas ADD COLUMN MontoRecibido TEXT;",
+            "ALTER TABLE Ventas ADD COLUMN Vuelto TEXT;",
+            "ALTER TABLE Ventas ADD COLUMN TicketOrigenId INTEGER;",
+            "ALTER TABLE Ventas ADD COLUMN ComprobanteDestinoId INTEGER;",
+            "ALTER TABLE Ventas ADD COLUMN MotivoAnulacion TEXT;"
+        };
+
+        foreach (var sql in ventaColumns)
+        {
+            try { db.Database.ExecuteSqlRaw(sql); } catch { /* Ignore if already exists */ }
+        }
+
+        // Clientes new columns
+        try { db.Database.ExecuteSqlRaw("ALTER TABLE Clientes ADD COLUMN Ruc TEXT;"); } catch { }
+        try { db.Database.ExecuteSqlRaw("ALTER TABLE Clientes ADD COLUMN Direccion TEXT;"); } catch { }
+
         // 1. Ensure Vendedor user exists
         if (!db.Usuarios.Any(u => u.NombreUsuario == "vendedor"))
         {
@@ -89,18 +118,35 @@ public static class DbInitializer
         }
         else
         {
-            // Populate expiration dates on existing seed items if they are currently null
-            var yogurt = db.Productos.FirstOrDefault(p => p.Nombre.Contains("Yogurt"));
-            if (yogurt != null && yogurt.FechaVencimiento == null)
+            // Populate/update expiration dates on existing database items if they are currently null
+            var defaultExpirations = new Dictionary<string, DateTime>
             {
-                yogurt.FechaVencimiento = DateTime.Today.AddDays(6);
-            }
-            var leche = db.Productos.FirstOrDefault(p => p.Nombre.Contains("Leche"));
-            if (leche != null && leche.FechaVencimiento == null)
+                { "Aceite Primor", DateTime.Today.AddMonths(6) },
+                { "Chocolate Sublime", DateTime.Today.AddMonths(3) },
+                { "Coca Cola", DateTime.Today.AddMonths(4) },
+                { "Galletas Chomp", DateTime.Today.AddDays(45) },
+                { "Inca Kola", DateTime.Today.AddMonths(3) },
+                { "Yogurt", DateTime.Today.AddDays(6) },
+                { "Leche", DateTime.Today.AddDays(25) },
+                { "Arroz Costeño", DateTime.Today.AddMonths(8) },
+                { "Agua San Luis", DateTime.Today.AddYears(1) }
+            };
+
+            bool changed = false;
+            foreach (var item in defaultExpirations)
             {
-                leche.FechaVencimiento = DateTime.Today.AddDays(25);
+                var prod = db.Productos.FirstOrDefault(p => p.Nombre.Contains(item.Key));
+                if (prod != null && prod.FechaVencimiento == null)
+                {
+                    prod.FechaVencimiento = item.Value;
+                    changed = true;
+                }
             }
-            db.SaveChanges();
+
+            if (changed)
+            {
+                db.SaveChanges();
+            }
         }
 
         // 5. Ensure Clients exist
@@ -110,6 +156,44 @@ public static class DbInitializer
                 new Cliente { Nombre = "Carlos Mendoza (Vecino)", Dni = "45678912", Telefono = "962000111", SaldoDeudor = 35.50m, LimiteCredito = 150.00m, Activo = true },
                 new Cliente { Nombre = "Ana Torres", Dni = "71234567", Telefono = "951000222", SaldoDeudor = 0.00m, LimiteCredito = 100.00m, Activo = true }
             );
+            db.SaveChanges();
+        }
+
+        // 6. Backfill any existing sales with empty NumeroComprobante
+        var legacySales = db.Ventas.Where(v => string.IsNullOrEmpty(v.NumeroComprobante)).ToList();
+        if (legacySales.Any())
+        {
+            int boletaSeq = 1;
+            int ticketSeq = 1;
+            foreach (var v in legacySales.OrderBy(v => v.Fecha))
+            {
+                if (v.TipoComprobante == TipoComprobante.Boleta)
+                {
+                    v.Serie = "B001";
+                    v.Numero = boletaSeq++;
+                    v.NumeroComprobante = $"{v.Serie}-{v.Numero:D6}";
+                }
+                else if (v.TipoComprobante == TipoComprobante.Factura)
+                {
+                    v.Serie = "F001";
+                    v.Numero = 1;
+                    v.NumeroComprobante = $"{v.Serie}-{v.Numero:D6}";
+                }
+                else
+                {
+                    v.Serie = "T001";
+                    v.Numero = ticketSeq++;
+                    v.NumeroComprobante = $"{v.Serie}-{v.Numero:D6}";
+                }
+
+                if (string.IsNullOrEmpty(v.ClienteNombre))
+                {
+                    v.ClienteNombre = "Clientes Varios";
+                }
+
+                v.Subtotal = Math.Round(v.Total / 1.18m, 2);
+                v.Igv = v.Total - v.Subtotal;
+            }
             db.SaveChanges();
         }
     }

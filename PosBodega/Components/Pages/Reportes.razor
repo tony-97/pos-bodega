@@ -79,29 +79,43 @@
 
             <!-- Sales list -->
             <div class="bg-surface-900 border border-surface-800 rounded-xl p-6">
-                <h2 class="text-lg font-semibold text-surface-100 mb-4">Detalle de Ventas</h2>
+                <h2 class="text-lg font-semibold text-surface-100 mb-4">Detalle de Ventas & Comprobantes</h2>
                 <div class="max-h-96 overflow-y-auto">
                     @if (ventas.Count > 0)
                     {
-                        <table class="w-full text-sm">
+                        <table class="w-full text-xs">
                             <thead>
                                 <tr class="border-b border-surface-800">
+                                    <th class="text-left py-2 text-surface-400 font-medium">N° Comprobante</th>
                                     <th class="text-left py-2 text-surface-400 font-medium">Fecha</th>
-                                    <th class="text-left py-2 text-surface-400 font-medium">Vendedor</th>
+                                    <th class="text-left py-2 text-surface-400 font-medium">Cliente</th>
                                     <th class="text-center py-2 text-surface-400 font-medium">Pago</th>
                                     <th class="text-right py-2 text-surface-400 font-medium">Total</th>
+                                    <th class="text-right py-2 text-surface-400 font-medium">Ticket</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach (var v in ventas)
                                 {
-                                    <tr class="border-b border-surface-800/50">
-                                        <td class="py-2 text-surface-300 text-xs">@v.Fecha.ToString("dd/MM HH:mm")</td>
-                                        <td class="py-2 text-surface-400">@v.Usuario.Nombre</td>
-                                        <td class="py-2 text-center">
-                                            <span class="px-2 py-0.5 text-xs rounded-full @GetPaymentBadge(v.MetodoPago)">@v.MetodoPago</span>
+                                    <tr class="border-b border-surface-800/50 hover:bg-surface-850/50 transition-colors">
+                                        <td class="py-2.5 font-mono font-bold text-surface-200">
+                                            <span class="px-1.5 py-0.5 rounded text-[10px] mr-1 @GetTipoBadge(v.TipoComprobante)">
+                                                @(v.TipoComprobante == TipoComprobante.Factura ? "FAC" : v.TipoComprobante == TipoComprobante.Boleta ? "BOL" : "TCK")
+                                            </span>
+                                            @v.NumeroComprobante
                                         </td>
-                                        <td class="py-2 text-right text-surface-200 font-mono">S/ @v.Total.ToString("N2")</td>
+                                        <td class="py-2.5 text-surface-400">@v.Fecha.ToString("dd/MM HH:mm")</td>
+                                        <td class="py-2.5 text-surface-300 max-w-[120px] truncate">@v.ClienteNombre</td>
+                                        <td class="py-2.5 text-center">
+                                            <span class="px-2 py-0.5 text-[10px] rounded-full @GetPaymentBadge(v.MetodoPago)">@v.MetodoPago</span>
+                                        </td>
+                                        <td class="py-2.5 text-right text-surface-100 font-mono font-semibold">S/ @v.Total.ToString("N2")</td>
+                                        <td class="py-2.5 text-right">
+                                            <button @onclick="() => selectedVenta = v"
+                                                    class="px-2 py-1 bg-surface-800 hover:bg-surface-700 text-primary-300 rounded text-[11px] font-medium transition-colors">
+                                                Ver
+                                            </button>
+                                        </td>
                                     </tr>
                                 }
                             </tbody>
@@ -117,12 +131,20 @@
     }
 </div>
 
+@if (selectedVenta != null)
+{
+    <ComprobanteModal Venta="selectedVenta"
+                      OnClose="() => selectedVenta = null"
+                      OnVentaUpdated="HandleVentaUpdated" />
+}
+
 @code {
     private DateTime fechaDesde = DateTime.Today.AddDays(-30);
     private DateTime fechaHasta = DateTime.Today;
     private List<Venta> ventas = new();
     private List<ProductoVendido> topProductos = new();
     private GananciaBruta ganancia = new();
+    private Venta? selectedVenta;
     private bool loaded;
 
     protected override async Task OnInitializedAsync()
@@ -138,6 +160,18 @@
         ganancia = await ReporteSvc.GetGananciaBrutaAsync(fechaDesde, fechaHasta);
         loaded = true;
     }
+
+    private async Task HandleVentaUpdated(Venta v)
+    {
+        await LoadReports();
+    }
+
+    private string GetTipoBadge(TipoComprobante t) => t switch
+    {
+        TipoComprobante.Boleta => "bg-primary-500/20 text-primary-400",
+        TipoComprobante.Factura => "bg-purple-500/20 text-purple-400",
+        _ => "bg-amber-500/20 text-amber-400"
+    };
 
     private string GetPaymentBadge(MetodoPago m) => m switch
     {

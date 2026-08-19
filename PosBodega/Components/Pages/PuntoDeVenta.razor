@@ -3,14 +3,16 @@
 @inject ProductoService ProductoSvc
 @inject VentaService VentaSvc
 @inject ClienteService ClienteSvc
+@inject EmpresaService EmpresaSvc
 @inject IJSRuntime JS
+@inject NavigationManager Nav
 
 <div class="flex gap-4 h-[calc(100vh-5rem)]">
     <!-- Left Panel: Product Search -->
     <div class="flex-1 flex flex-col min-w-0">
-        <!-- Search bar -->
-        <div class="mb-4">
-            <div class="relative">
+        <!-- Search bar & Quick Actions -->
+        <div class="flex gap-3 mb-4">
+            <div class="relative flex-1">
                 <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <svg class="w-5 h-5 text-surface-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
@@ -21,6 +23,14 @@
                        class="w-full pl-12 pr-4 py-3.5 bg-surface-900 border border-surface-700 rounded-xl text-surface-100 placeholder-surface-500 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all text-base"
                        placeholder="Buscar producto por nombre o código de barras..." autocomplete="off" />
             </div>
+            <button @onclick='() => Nav.NavigateTo("/comprobantes")'
+                    class="px-4 py-3.5 bg-surface-900 border border-surface-700 hover:border-surface-600 text-surface-300 hover:text-surface-100 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all flex-shrink-0"
+                    title="Ver historial de comprobantes, reimprimir o convertir tickets">
+                <svg class="w-4 h-4 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                </svg>
+                <span>Historial Comprobantes</span>
+            </button>
         </div>
 
         <!-- Category filters -->
@@ -96,12 +106,17 @@
         </div>
     </div>
 
-    <!-- Right Panel: Cart / Ticket -->
+    <!-- Right Panel: Cart & Document Issuance -->
     <div class="w-96 flex-shrink-0 flex flex-col bg-surface-900 border border-surface-800 rounded-xl overflow-hidden">
         <!-- Cart header -->
         <div class="p-4 border-b border-surface-800">
             <div class="flex items-center justify-between">
-                <h2 class="text-lg font-semibold text-surface-100">Ticket de Venta</h2>
+                <div>
+                    <h2 class="text-lg font-semibold text-surface-100">Venta en Caja</h2>
+                    <p class="text-[11px] text-surface-400">
+                        Próximo: <span class="font-mono font-bold text-primary-400">@proximoCorrelativo</span>
+                    </p>
+                </div>
                 @if (cartItems.Count > 0)
                 {
                     <button @onclick="ClearCart" class="text-xs text-surface-500 hover:text-rose-400 transition-colors">
@@ -119,7 +134,7 @@
                     <svg class="w-12 h-12 mb-3 text-surface-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z" />
                     </svg>
-                    <p class="text-sm">Agregue productos al ticket</p>
+                    <p class="text-sm">Agregue productos al comprobante</p>
                     <p class="text-xs mt-1">Busque o haga clic en un producto</p>
                 </div>
             }
@@ -161,30 +176,101 @@
             }
         </div>
 
-        <!-- Cart footer -->
+        <!-- Cart footer & Checkout Form -->
         @if (cartItems.Count > 0)
         {
-            <div class="border-t border-surface-800 p-4 space-y-4">
-                <!-- Total -->
-                <div class="flex items-center justify-between">
-                    <span class="text-surface-400 font-medium">Total</span>
-                    <span class="text-2xl font-bold text-surface-50">S/ @CartTotal.ToString("N2")</span>
+            <div class="border-t border-surface-800 p-4 space-y-3.5 max-h-[50vh] overflow-y-auto">
+                <!-- Tipo de Comprobante Selection -->
+                <div>
+                    <label class="block text-xs font-semibold text-surface-400 mb-1.5">Tipo de Comprobante (SUNAT)</label>
+                    <div class="grid grid-cols-3 gap-1.5">
+                        <button type="button" @onclick="() => SetTipoComprobante(TipoComprobante.Boleta)"
+                                class="py-2 px-2 rounded-lg text-xs font-semibold transition-all text-center @(tipoComprobante == TipoComprobante.Boleta ? "bg-primary-600 text-white shadow-sm" : "bg-surface-800 text-surface-400 hover:bg-surface-700")">
+                            Boleta
+                        </button>
+                        <button type="button" @onclick="() => SetTipoComprobante(TipoComprobante.Factura)"
+                                class="py-2 px-2 rounded-lg text-xs font-semibold transition-all text-center @(tipoComprobante == TipoComprobante.Factura ? "bg-purple-600 text-white shadow-sm" : "bg-surface-800 text-surface-400 hover:bg-surface-700")">
+                            Factura
+                        </button>
+                        <button type="button" @onclick="() => SetTipoComprobante(TipoComprobante.TicketInterno)"
+                                class="py-2 px-2 rounded-lg text-xs font-semibold transition-all text-center @(tipoComprobante == TipoComprobante.TicketInterno ? "bg-amber-600 text-white shadow-sm" : "bg-surface-800 text-surface-400 hover:bg-surface-700")">
+                            Ticket
+                        </button>
+                    </div>
                 </div>
+
+                <!-- Client details depending on Comprobante -->
+                @if (tipoComprobante == TipoComprobante.Factura)
+                {
+                    <div class="p-3 bg-purple-500/10 border border-purple-500/30 rounded-xl space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[11px] font-bold text-purple-300">Datos Obligatorios de Factura</span>
+                            <span class="text-[10px] text-purple-400 font-mono">F001</span>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-surface-400 mb-0.5">RUC del Cliente (11 dígitos) *</label>
+                            <input type="text" @bind="clienteDocumento" @bind:event="oninput" maxlength="11"
+                                   placeholder="Ej: 20123456789 o 10456789123"
+                                   class="w-full px-2.5 py-1.5 bg-surface-900 border border-surface-700 rounded-lg text-surface-100 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-purple-500" />
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-surface-400 mb-0.5">Razón Social / Nombre *</label>
+                            <input type="text" @bind="clienteNombre"
+                                   placeholder="Nombre o Razón Social"
+                                   class="w-full px-2.5 py-1.5 bg-surface-900 border border-surface-700 rounded-lg text-surface-100 text-xs focus:outline-none focus:ring-1 focus:ring-purple-500" />
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-surface-400 mb-0.5">Dirección Fiscal (Opcional)</label>
+                            <input type="text" @bind="clienteDireccion"
+                                   placeholder="Dirección fiscal"
+                                   class="w-full px-2.5 py-1.5 bg-surface-900 border border-surface-700 rounded-lg text-surface-100 text-xs focus:outline-none focus:ring-1 focus:ring-purple-500" />
+                        </div>
+                    </div>
+                }
+                else if (tipoComprobante == TipoComprobante.Boleta)
+                {
+                    <div class="p-3 bg-surface-800/60 border border-surface-700 rounded-xl space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[11px] font-semibold text-surface-300">Datos del Cliente (Boleta)</span>
+                            <span class="text-[10px] text-primary-400 font-mono">B001</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-[10px] text-surface-400 mb-0.5">DNI o RUC @(CartTotal > 700 ? "*" : "")</label>
+                                <input type="text" @bind="clienteDocumento" maxlength="11"
+                                       placeholder="DNI / RUC"
+                                       class="w-full px-2.5 py-1.5 bg-surface-900 border border-surface-700 rounded-lg text-surface-100 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                            </div>
+                            <div>
+                                <label class="block text-[10px] text-surface-400 mb-0.5">Nombre / Razón</label>
+                                <input type="text" @bind="clienteNombre"
+                                       placeholder="Clientes Varios"
+                                       class="w-full px-2.5 py-1.5 bg-surface-900 border border-surface-700 rounded-lg text-surface-100 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                            </div>
+                        </div>
+                        @if (CartTotal > 700)
+                        {
+                            <p class="text-[10px] text-amber-400">
+                                ⚠ SUNAT exige DNI/RUC y Nombre para ventas mayores a S/ 700.00.
+                            </p>
+                        }
+                    </div>
+                }
 
                 <!-- Payment method -->
                 <div>
-                    <label class="block text-xs text-surface-500 mb-2">Método de Pago</label>
-                    <div class="grid grid-cols-3 gap-2">
-                        <button @onclick='() => metodoPago = MetodoPago.Efectivo'
-                                class="py-2 px-3 rounded-lg text-xs font-medium transition-colors @(metodoPago == MetodoPago.Efectivo ? "bg-primary-600 text-white" : "bg-surface-800 text-surface-400 hover:bg-surface-700")">
+                    <label class="block text-xs font-semibold text-surface-400 mb-1.5">Método de Pago</label>
+                    <div class="grid grid-cols-3 gap-1.5">
+                        <button type="button" @onclick='() => metodoPago = MetodoPago.Efectivo'
+                                class="py-2 px-2 rounded-lg text-xs font-medium transition-colors @(metodoPago == MetodoPago.Efectivo ? "bg-primary-600 text-white" : "bg-surface-800 text-surface-400 hover:bg-surface-700")">
                             Efectivo
                         </button>
-                        <button @onclick='() => metodoPago = MetodoPago.YapePlin'
-                                class="py-2 px-3 rounded-lg text-xs font-medium transition-colors @(metodoPago == MetodoPago.YapePlin ? "bg-primary-600 text-white" : "bg-surface-800 text-surface-400 hover:bg-surface-700")">
+                        <button type="button" @onclick='() => metodoPago = MetodoPago.YapePlin'
+                                class="py-2 px-2 rounded-lg text-xs font-medium transition-colors @(metodoPago == MetodoPago.YapePlin ? "bg-primary-600 text-white" : "bg-surface-800 text-surface-400 hover:bg-surface-700")">
                             Yape/Plin
                         </button>
-                        <button @onclick='() => metodoPago = MetodoPago.Tarjeta'
-                                class="py-2 px-3 rounded-lg text-xs font-medium transition-colors @(metodoPago == MetodoPago.Tarjeta ? "bg-primary-600 text-white" : "bg-surface-800 text-surface-400 hover:bg-surface-700")">
+                        <button type="button" @onclick='() => metodoPago = MetodoPago.Tarjeta'
+                                class="py-2 px-2 rounded-lg text-xs font-medium transition-colors @(metodoPago == MetodoPago.Tarjeta ? "bg-primary-600 text-white" : "bg-surface-800 text-surface-400 hover:bg-surface-700")">
                             Tarjeta
                         </button>
                     </div>
@@ -193,15 +279,15 @@
                 <!-- Cash input for Efectivo -->
                 @if (metodoPago == MetodoPago.Efectivo)
                 {
-                    <div class="grid grid-cols-2 gap-3">
+                    <div class="grid grid-cols-2 gap-2">
                         <div>
-                            <label class="block text-xs text-surface-500 mb-1">Recibido</label>
+                            <label class="block text-[11px] text-surface-400 mb-0.5">Recibido</label>
                             <input type="number" @bind="montoRecibido" step="0.10" min="0"
-                                   class="w-full px-3 py-2 bg-surface-800 border border-surface-700 rounded-lg text-surface-100 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                                   class="w-full px-3 py-1.5 bg-surface-800 border border-surface-700 rounded-lg text-surface-100 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 font-mono" />
                         </div>
                         <div>
-                            <label class="block text-xs text-surface-500 mb-1">Vuelto</label>
-                            <div class="px-3 py-2 bg-surface-800 border border-surface-700 rounded-lg text-sm font-semibold @(Vuelto >= 0 ? "text-emerald-400" : "text-rose-400")">
+                            <label class="block text-[11px] text-surface-400 mb-0.5">Vuelto</label>
+                            <div class="px-3 py-1.5 bg-surface-800 border border-surface-700 rounded-lg text-sm font-semibold font-mono @(Vuelto >= 0 ? "text-emerald-400" : "text-rose-400")">
                                 S/ @Vuelto.ToString("N2")
                             </div>
                         </div>
@@ -212,17 +298,17 @@
                 <div class="flex items-center gap-3">
                     <label class="flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" @bind="esFiado" class="w-4 h-4 rounded border-surface-600 bg-surface-800 text-primary-500 focus:ring-primary-500/50" />
-                        <span class="text-sm text-surface-300">Venta al fiado</span>
+                        <span class="text-xs text-surface-300 font-medium">Venta al fiado (Cuentas por cobrar)</span>
                     </label>
                 </div>
 
                 @if (esFiado)
                 {
                     <div>
-                        <label class="block text-xs text-surface-500 mb-1">Seleccionar Cliente</label>
-                        <select @bind="selectedClienteId"
-                                class="w-full px-3 py-2 bg-surface-800 border border-surface-700 rounded-lg text-surface-100 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500">
-                            <option value="0">-- Seleccione --</option>
+                        <label class="block text-[11px] text-surface-400 mb-1">Seleccionar Cliente Fiador</label>
+                        <select @bind="selectedClienteId" @bind:after="OnClienteFiadoChanged"
+                                class="w-full px-3 py-2 bg-surface-800 border border-surface-700 rounded-lg text-surface-100 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500">
+                            <option value="0">-- Seleccione Cliente --</option>
                             @foreach (var c in clientes)
                             {
                                 <option value="@c.Id">@c.Nombre (Deuda: S/ @c.SaldoDeudor.ToString("N2"))</option>
@@ -231,16 +317,21 @@
                     </div>
                 }
 
-                <!-- DNI for boleta > 700 -->
-                @if (CartTotal > 700)
-                {
-                    <div class="p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-lg">
-                        <p class="text-xs text-amber-400 mb-2">⚠ Monto mayor a S/ 700 — DNI requerido</p>
-                        <input type="text" @bind="clienteDni" maxlength="8"
-                               class="w-full px-3 py-2 bg-surface-800 border border-surface-700 rounded-lg text-surface-100 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
-                               placeholder="DNI del cliente" />
+                <!-- Total Breakdown -->
+                <div class="pt-2 border-t border-surface-800 space-y-1">
+                    <div class="flex justify-between text-xs text-surface-400">
+                        <span>Op. Gravada:</span>
+                        <span>S/ @OpGravada.ToString("N2")</span>
                     </div>
-                }
+                    <div class="flex justify-between text-xs text-surface-400">
+                        <span>IGV (18%):</span>
+                        <span>S/ @IgvCalculado.ToString("N2")</span>
+                    </div>
+                    <div class="flex items-center justify-between pt-1">
+                        <span class="text-sm font-semibold text-surface-200">TOTAL:</span>
+                        <span class="text-2xl font-bold text-surface-50 font-mono">S/ @CartTotal.ToString("N2")</span>
+                    </div>
+                </div>
 
                 <!-- Error message -->
                 @if (!string.IsNullOrEmpty(errorMessage))
@@ -250,33 +341,31 @@
                     </div>
                 }
 
-                <!-- Success message -->
-                @if (showSuccess)
-                {
-                    <div class="p-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-emerald-400 text-xs">
-                        ✓ Venta registrada exitosamente
-                    </div>
-                }
-
                 <!-- Submit button -->
                 <button @onclick="ProcessSale" disabled="@isProcessing"
-                        class="w-full py-3 bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-500 hover:to-primary-400 text-white font-semibold rounded-xl shadow-lg shadow-primary-500/20 transition-all disabled:opacity-50">
+                        class="w-full py-3 bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-500 hover:to-primary-400 text-white font-semibold rounded-xl shadow-lg shadow-primary-500/20 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
                     @if (isProcessing)
                     {
-                        <span class="flex items-center justify-center gap-2">
-                            <div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                            Procesando...
-                        </span>
+                        <div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                        <span>Emitiendo Comprobante...</span>
                     }
                     else
                     {
-                        <span>Cobrar S/ @CartTotal.ToString("N2") (F2)</span>
+                        <span>Emitir @(tipoComprobante == TipoComprobante.Factura ? "Factura" : tipoComprobante == TipoComprobante.Boleta ? "Boleta" : "Ticket") S/ @CartTotal.ToString("N2")</span>
                     }
                 </button>
             </div>
         }
     </div>
 </div>
+
+<!-- Receipt Modal -->
+@if (emittedVenta != null)
+{
+    <ComprobanteModal Venta="emittedVenta"
+                      OnClose="() => emittedVenta = null"
+                      OnVentaUpdated="HandleVentaUpdated" />
+}
 
 @code {
     private ElementReference searchInput;
@@ -288,16 +377,23 @@
     private List<CartItem> cartItems = new();
     private List<Cliente> clientes = new();
 
+    private TipoComprobante tipoComprobante = TipoComprobante.Boleta;
     private MetodoPago metodoPago = MetodoPago.Efectivo;
     private decimal montoRecibido;
     private bool esFiado;
     private int selectedClienteId;
-    private string clienteDni = "";
+    private string clienteNombre = "";
+    private string clienteDocumento = "";
+    private string clienteDireccion = "";
+    private string proximoCorrelativo = "B001-000001";
+
     private string? errorMessage;
     private bool isProcessing;
-    private bool showSuccess;
+    private Venta? emittedVenta;
 
     private decimal CartTotal => cartItems.Sum(i => i.Subtotal);
+    private decimal OpGravada => Math.Round(CartTotal / 1.18m, 2);
+    private decimal IgvCalculado => CartTotal - OpGravada;
     private decimal Vuelto => montoRecibido - CartTotal;
 
     protected override async Task OnInitializedAsync()
@@ -306,6 +402,19 @@
         filteredProducts = allProducts;
         categories = allProducts.Select(p => p.Categoria).DistinctBy(c => c.Id).OrderBy(c => c.Nombre).ToList();
         clientes = await ClienteSvc.GetAllAsync();
+        await UpdateProximoCorrelativo();
+    }
+
+    private async Task SetTipoComprobante(TipoComprobante tipo)
+    {
+        tipoComprobante = tipo;
+        await UpdateProximoCorrelativo();
+    }
+
+    private async Task UpdateProximoCorrelativo()
+    {
+        var next = await VentaSvc.GetNextCorrelativoAsync(tipoComprobante);
+        proximoCorrelativo = next.NumeroComprobante;
     }
 
     private void FilterByCategory(int? categoryId)
@@ -384,24 +493,39 @@
         montoRecibido = CartTotal;
     }
 
+    private void OnClienteFiadoChanged()
+    {
+        if (selectedClienteId > 0)
+        {
+            var cliente = clientes.FirstOrDefault(c => c.Id == selectedClienteId);
+            if (cliente != null)
+            {
+                clienteNombre = cliente.Nombre;
+                clienteDocumento = !string.IsNullOrEmpty(cliente.Dni) ? cliente.Dni : (cliente.Ruc ?? "");
+                clienteDireccion = cliente.Direccion ?? "";
+            }
+        }
+    }
+
     private void ClearCart()
     {
         cartItems.Clear();
         montoRecibido = 0;
         esFiado = false;
         selectedClienteId = 0;
-        clienteDni = "";
+        clienteDocumento = "";
+        clienteNombre = "";
+        clienteDireccion = "";
         errorMessage = null;
     }
 
     private async Task ProcessSale()
     {
         errorMessage = null;
-        showSuccess = false;
 
         if (cartItems.Count == 0)
         {
-            errorMessage = "Agregue productos al ticket.";
+            errorMessage = "Agregue productos al comprobante.";
             return;
         }
 
@@ -417,9 +541,15 @@
             return;
         }
 
-        if (CartTotal > 700 && string.IsNullOrWhiteSpace(clienteDni))
+        // Validate SUNAT rules
+        if (!SunatValidator.ValidarComprobante(
+            tipoComprobante,
+            CartTotal,
+            clienteNombre,
+            clienteDocumento,
+            out var sunatErr))
         {
-            errorMessage = "DNI requerido para montos mayores a S/ 700.";
+            errorMessage = sunatErr;
             return;
         }
 
@@ -429,9 +559,14 @@
         {
             UsuarioId = Auth.CurrentUser!.Id,
             MetodoPago = metodoPago,
-            TipoComprobante = TipoComprobante.TicketInterno,
+            TipoComprobante = tipoComprobante,
             EsFiado = esFiado,
-            ClienteId = esFiado ? selectedClienteId : null
+            ClienteId = esFiado ? selectedClienteId : null,
+            ClienteNombre = string.IsNullOrWhiteSpace(clienteNombre) ? "Clientes Varios" : clienteNombre.Trim(),
+            ClienteDocumento = string.IsNullOrWhiteSpace(clienteDocumento) ? null : clienteDocumento.Trim(),
+            ClienteDireccion = string.IsNullOrWhiteSpace(clienteDireccion) ? null : clienteDireccion.Trim(),
+            MontoRecibido = metodoPago == MetodoPago.Efectivo ? montoRecibido : CartTotal,
+            Vuelto = metodoPago == MetodoPago.Efectivo ? Vuelto : 0
         };
 
         var detalles = cartItems.Select(i => new VentaDetalle
@@ -441,34 +576,34 @@
             PrecioUnitario = i.PrecioUnitario
         }).ToList();
 
-        var error = await VentaSvc.RegistrarVentaAsync(venta, detalles);
+        var (createdVenta, error) = await VentaSvc.RegistrarVentaAsync(venta, detalles);
 
         if (error != null)
         {
             errorMessage = error;
-        }
-        else
-        {
-            showSuccess = true;
-            // Refresh products to get updated stock
-            allProducts = await ProductoSvc.GetAllAsync();
-            ApplyFilters();
-            clientes = await ClienteSvc.GetAllAsync();
-
-            // Auto-clear after short delay
-            _ = Task.Run(async () =>
-            {
-                await Task.Delay(1500);
-                await InvokeAsync(() =>
-                {
-                    ClearCart();
-                    showSuccess = false;
-                    StateHasChanged();
-                });
-            });
+            isProcessing = false;
+            return;
         }
 
+        // Sale succeeded!
+        emittedVenta = createdVenta;
+
+        // Refresh products to get updated stock
+        allProducts = await ProductoSvc.GetAllAsync();
+        ApplyFilters();
+        clientes = await ClienteSvc.GetAllAsync();
+        await UpdateProximoCorrelativo();
+
+        ClearCart();
         isProcessing = false;
+    }
+
+    private async Task HandleVentaUpdated(Venta updatedVenta)
+    {
+        allProducts = await ProductoSvc.GetAllAsync();
+        ApplyFilters();
+        clientes = await ClienteSvc.GetAllAsync();
+        await UpdateProximoCorrelativo();
     }
 
     private class CartItem

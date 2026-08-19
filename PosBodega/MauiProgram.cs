@@ -36,6 +36,7 @@ public static class MauiProgram
 		builder.Services.AddSingleton<ClienteService>();
 		builder.Services.AddSingleton<PagoFiadoService>();
 		builder.Services.AddSingleton<ReporteService>();
+		builder.Services.AddSingleton<EmpresaService>();
 		builder.Services.AddSingleton<UsuarioService>();
 
 		var app = builder.Build();

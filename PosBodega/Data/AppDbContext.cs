@@ -113,6 +113,13 @@ public class AppDbContext : DbContext
             .IsUnique()
             .HasFilter("[CodigoBarras] IS NOT NULL");
 
+        // Index on Venta Serie + Numero for fast correlative lookups
+        modelBuilder.Entity<Venta>()
+            .HasIndex(v => new { v.Serie, v.Numero });
+
+        modelBuilder.Entity<Venta>()
+            .HasIndex(v => v.TipoComprobante);
+
         // --- Seed Data ---
 
         // Default users (admin123 and vendedor123)

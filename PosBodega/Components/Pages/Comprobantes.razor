@@ -1,0 +1,310 @@
+@page "/comprobantes"
+@inject AuthService Auth
+@inject VentaService VentaSvc
+@inject EmpresaService EmpresaSvc
+@inject NavigationManager Nav
+
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-surface-50">Historial de Comprobantes</h1>
+            <p class="text-surface-400 text-sm mt-1">
+                Boletas de Venta (B001), Facturas (F001) y Tickets Internos (T001)
+            </p>
+        </div>
+        <div class="flex items-center gap-3">
+            <button @onclick='() => Nav.NavigateTo("/pos")'
+                    class="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-500 hover:to-primary-400 text-white rounded-xl font-medium text-sm transition-all shadow-lg shadow-primary-600/20">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                Nueva Venta (POS)
+            </button>
+        </div>
+    </div>
+
+    <!-- Summary Metrics -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Total Emitido -->
+        <div class="bg-surface-900 border border-surface-800 rounded-xl p-4">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-xs text-surface-400 font-medium">Total Facturado</span>
+                <span class="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
+                </span>
+            </div>
+            <p class="text-xl font-bold text-surface-50">S/ @TotalFacturado.ToString("N2")</p>
+            <p class="text-xs text-surface-500 mt-0.5">@ventas.Count(v => v.Estado == EstadoVenta.Emitida) comprobantes activos</p>
+        </div>
+
+        <!-- Boletas -->
+        <div class="bg-surface-900 border border-surface-800 rounded-xl p-4">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-xs text-primary-400 font-medium">Boletas (B001)</span>
+                <span class="p-1.5 rounded-lg bg-primary-500/10 text-primary-400 font-bold text-xs">B001</span>
+            </div>
+            <p class="text-xl font-bold text-surface-50">S/ @TotalBoletas.ToString("N2")</p>
+            <p class="text-xs text-surface-500 mt-0.5">@CountBoletas boletas emitidas</p>
+        </div>
+
+        <!-- Facturas -->
+        <div class="bg-surface-900 border border-surface-800 rounded-xl p-4">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-xs text-purple-400 font-medium">Facturas (F001)</span>
+                <span class="p-1.5 rounded-lg bg-purple-500/10 text-purple-400 font-bold text-xs">F001</span>
+            </div>
+            <p class="text-xl font-bold text-surface-50">S/ @TotalFacturas.ToString("N2")</p>
+            <p class="text-xs text-surface-500 mt-0.5">@CountFacturas facturas emitidas</p>
+        </div>
+
+        <!-- Tickets Pendientes -->
+        <div class="bg-surface-900 border border-surface-800 rounded-xl p-4">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-xs text-amber-400 font-medium">Tickets Pendientes</span>
+                <span class="p-1.5 rounded-lg bg-amber-500/10 text-amber-400 font-bold text-xs">T001</span>
+            </div>
+            <p class="text-xl font-bold text-surface-50">@CountTicketsPendientes</p>
+            <p class="text-xs text-surface-500 mt-0.5">tickets por convertir</p>
+        </div>
+    </div>
+
+    <!-- Filters & Search -->
+    <div class="bg-surface-900 border border-surface-800 rounded-xl p-4 space-y-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            <!-- Search text -->
+            <div class="lg:col-span-2">
+                <label class="block text-[11px] text-surface-400 mb-1">Buscar</label>
+                <div class="relative">
+                    <input type="text" @bind="filtroBusqueda" @bind:event="oninput"
+                           placeholder="Buscar por N° comprobante, cliente o DNI/RUC..."
+                           class="w-full pl-9 pr-3 py-2 bg-surface-800 border border-surface-700 rounded-lg text-surface-100 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                    <svg class="w-4 h-4 text-surface-500 absolute left-3 top-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Tipo selector -->
+            <div>
+                <label class="block text-[11px] text-surface-400 mb-1">Tipo Comprobante</label>
+                <select @bind="filtroTipo" class="w-full px-3 py-2 bg-surface-800 border border-surface-700 rounded-lg text-surface-100 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500">
+                    <option value="">Todos los tipos</option>
+                    <option value="Boleta">Boleta (B001)</option>
+                    <option value="Factura">Factura (F001)</option>
+                    <option value="TicketInterno">Ticket Interno (T001)</option>
+                </select>
+            </div>
+
+            <!-- Estado selector -->
+            <div>
+                <label class="block text-[11px] text-surface-400 mb-1">Estado</label>
+                <select @bind="filtroEstado" class="w-full px-3 py-2 bg-surface-800 border border-surface-700 rounded-lg text-surface-100 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500">
+                    <option value="">Todos los estados</option>
+                    <option value="Emitida">Emitida</option>
+                    <option value="Anulada">Anulada</option>
+                    <option value="Convertido">Ticket Convertido</option>
+                    <option value="Pendiente">Ticket Pendiente</option>
+                </select>
+            </div>
+
+            <!-- Reset filters -->
+            <div class="flex items-end">
+                <button @onclick="ResetFilters"
+                        class="w-full py-2 bg-surface-800 hover:bg-surface-700 text-surface-300 rounded-lg text-xs font-medium transition-colors">
+                    Limpiar Filtros
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Comprobantes Table -->
+    <div class="bg-surface-900 border border-surface-800 rounded-xl overflow-hidden shadow-sm">
+        <div class="overflow-x-auto">
+            @if (FilteredVentas.Count == 0)
+            {
+                <div class="flex flex-col items-center justify-center py-12 text-surface-500">
+                    <svg class="w-12 h-12 mb-3 text-surface-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                    </svg>
+                    <p class="text-sm font-medium">No se encontraron comprobantes con los filtros actuales</p>
+                </div>
+            }
+            else
+            {
+                <table class="w-full text-xs text-left">
+                    <thead class="bg-surface-950/60 text-surface-400 font-semibold border-b border-surface-800 uppercase tracking-wider">
+                        <tr>
+                            <th class="py-3 px-4">Comprobante</th>
+                            <th class="py-3 px-3">Fecha & Hora</th>
+                            <th class="py-3 px-3">Cliente</th>
+                            <th class="py-3 px-3">Documento</th>
+                            <th class="py-3 px-3">Cajero</th>
+                            <th class="py-3 px-3">Pago</th>
+                            <th class="py-3 px-3 text-right">Total</th>
+                            <th class="py-3 px-3 text-center">Estado</th>
+                            <th class="py-3 px-4 text-right">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-surface-800/60">
+                        @foreach (var v in FilteredVentas)
+                        {
+                            <tr class="hover:bg-surface-850/60 transition-colors @(v.Estado == EstadoVenta.Anulada ? "opacity-60 bg-rose-950/10" : "")">
+                                <!-- Comprobante Serie-Numero -->
+                                <td class="py-3 px-4 font-mono font-bold">
+                                    <div class="flex items-center gap-2">
+                                        <span class="px-2 py-0.5 rounded text-[10px] font-semibold @GetTipoBadge(v.TipoComprobante)">
+                                            @(v.TipoComprobante == TipoComprobante.Factura ? "FAC" : v.TipoComprobante == TipoComprobante.Boleta ? "BOL" : "TCK")
+                                        </span>
+                                        <span class="text-surface-100">@v.NumeroComprobante</span>
+                                    </div>
+                                </td>
+
+                                <!-- Fecha -->
+                                <td class="py-3 px-3 text-surface-300">
+                                    @v.Fecha.ToString("dd/MM/yyyy HH:mm")
+                                </td>
+
+                                <!-- Cliente -->
+                                <td class="py-3 px-3 font-medium text-surface-200 max-w-[160px] truncate">
+                                    @v.ClienteNombre
+                                </td>
+
+                                <!-- Documento DNI/RUC -->
+                                <td class="py-3 px-3 font-mono text-surface-400">
+                                    @if (!string.IsNullOrEmpty(v.ClienteDocumento))
+                                    {
+                                        <span>@(v.ClienteTipoDocumento == TipoDocumentoIdentidad.RUC ? "RUC: " : "DNI: ")@v.ClienteDocumento</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-surface-600">-</span>
+                                    }
+                                </td>
+
+                                <!-- Cajero -->
+                                <td class="py-3 px-3 text-surface-400">
+                                    @(v.Usuario?.Nombre ?? "Caja")
+                                </td>
+
+                                <!-- Pago -->
+                                <td class="py-3 px-3">
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] @GetPaymentBadge(v.MetodoPago)">
+                                        @v.MetodoPago @(v.EsFiado ? "(Fiado)" : "")
+                                    </span>
+                                </td>
+
+                                <!-- Total -->
+                                <td class="py-3 px-3 text-right font-mono font-bold text-surface-50 text-sm">
+                                    S/ @v.Total.ToString("N2")
+                                </td>
+
+                                <!-- Estado -->
+                                <td class="py-3 px-3 text-center">
+                                    @if (v.Estado == EstadoVenta.Anulada)
+                                    {
+                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-500/20 text-rose-400 border border-rose-500/30">
+                                            Anulada
+                                        </span>
+                                    }
+                                    else if (v.ComprobanteDestinoId.HasValue)
+                                    {
+                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-500/20 text-blue-400 border border-blue-500/30" title="Convertido a comprobante oficial">
+                                            Convertido
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                                            Emitida
+                                        </span>
+                                    }
+                                </td>
+
+                                <!-- Acciones -->
+                                <td class="py-3 px-4 text-right">
+                                    <button @onclick="() => selectedVenta = v"
+                                            class="px-2.5 py-1.5 bg-surface-800 hover:bg-surface-700 text-primary-300 hover:text-primary-200 rounded-lg text-xs font-medium transition-colors inline-flex items-center gap-1.5">
+                                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.656h10.5Z" /></svg>
+                                        <span>Ticket</span>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Receipt Modal -->
+@if (selectedVenta != null)
+{
+    <ComprobanteModal Venta="selectedVenta"
+                      OnClose="() => selectedVenta = null"
+                      OnVentaUpdated="HandleVentaUpdated" />
+}
+
+@code {
+    private List<Venta> ventas = new();
+    private Venta? selectedVenta;
+    private string filtroBusqueda = "";
+    private string filtroTipo = "";
+    private string filtroEstado = "";
+
+    private decimal TotalFacturado => ventas.Where(v => v.Estado == EstadoVenta.Emitida).Sum(v => v.Total);
+    private decimal TotalBoletas => ventas.Where(v => v.Estado == EstadoVenta.Emitida && v.TipoComprobante == TipoComprobante.Boleta).Sum(v => v.Total);
+    private decimal TotalFacturas => ventas.Where(v => v.Estado == EstadoVenta.Emitida && v.TipoComprobante == TipoComprobante.Factura).Sum(v => v.Total);
+    private int CountBoletas => ventas.Count(v => v.TipoComprobante == TipoComprobante.Boleta && v.Estado == EstadoVenta.Emitida);
+    private int CountFacturas => ventas.Count(v => v.TipoComprobante == TipoComprobante.Factura && v.Estado == EstadoVenta.Emitida);
+    private int CountTicketsPendientes => ventas.Count(v => v.TipoComprobante == TipoComprobante.TicketInterno && v.Estado == EstadoVenta.Emitida && !v.ComprobanteDestinoId.HasValue);
+
+    private List<Venta> FilteredVentas => ventas.Where(v =>
+        (string.IsNullOrEmpty(filtroBusqueda) ||
+         v.NumeroComprobante.Contains(filtroBusqueda, StringComparison.OrdinalIgnoreCase) ||
+         v.ClienteNombre.Contains(filtroBusqueda, StringComparison.OrdinalIgnoreCase) ||
+         (v.ClienteDocumento != null && v.ClienteDocumento.Contains(filtroBusqueda))) &&
+        (string.IsNullOrEmpty(filtroTipo) || v.TipoComprobante.ToString() == filtroTipo) &&
+        (string.IsNullOrEmpty(filtroEstado) ||
+         (filtroEstado == "Emitida" && v.Estado == EstadoVenta.Emitida && !v.ComprobanteDestinoId.HasValue) ||
+         (filtroEstado == "Anulada" && v.Estado == EstadoVenta.Anulada) ||
+         (filtroEstado == "Convertido" && v.ComprobanteDestinoId.HasValue) ||
+         (filtroEstado == "Pendiente" && v.TipoComprobante == TipoComprobante.TicketInterno && v.Estado == EstadoVenta.Emitida && !v.ComprobanteDestinoId.HasValue))
+    ).ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadVentas();
+    }
+
+    private async Task LoadVentas()
+    {
+        ventas = await VentaSvc.GetAllAsync();
+    }
+
+    private void ResetFilters()
+    {
+        filtroBusqueda = "";
+        filtroTipo = "";
+        filtroEstado = "";
+    }
+
+    private async Task HandleVentaUpdated(Venta v)
+    {
+        await LoadVentas();
+    }
+
+    private string GetTipoBadge(TipoComprobante t) => t switch
+    {
+        TipoComprobante.Boleta => "bg-primary-500/20 text-primary-400 border border-primary-500/30",
+        TipoComprobante.Factura => "bg-purple-500/20 text-purple-400 border border-purple-500/30",
+        _ => "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+    };
+
+    private string GetPaymentBadge(MetodoPago m) => m switch
+    {
+        MetodoPago.Efectivo => "bg-emerald-500/10 text-emerald-400",
+        MetodoPago.YapePlin => "bg-purple-500/10 text-purple-400",
+        MetodoPago.Tarjeta => "bg-blue-500/10 text-blue-400",
+        _ => "bg-surface-700 text-surface-400"
+    };
+}

@@ -12,6 +12,12 @@ public class Cliente
     [MaxLength(15)]
     public string? Dni { get; set; }
 
+    [MaxLength(15)]
+    public string? Ruc { get; set; }
+
+    [MaxLength(300)]
+    public string? Direccion { get; set; }
+
     [MaxLength(20)]
     public string? Telefono { get; set; }
 
@@ -23,3 +29,4 @@ public class Cliente
 
     public ICollection<PagoFiado> Pagos { get; set; } = new List<PagoFiado>();
 }
+

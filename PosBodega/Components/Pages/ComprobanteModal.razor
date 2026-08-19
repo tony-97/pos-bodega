@@ -1,0 +1,567 @@
+@inject EmpresaService EmpresaSvc
+@inject VentaService VentaSvc
+@inject IJSRuntime JS
+
+<div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
+    <div class="bg-surface-900 border border-surface-700 rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-5 my-8">
+        <!-- Header Actions -->
+        <div class="flex items-center justify-between pb-3 border-b border-surface-800">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg @(Venta.TipoComprobante == TipoComprobante.Factura ? "bg-purple-500/20 text-purple-400" : Venta.TipoComprobante == TipoComprobante.Boleta ? "bg-primary-500/20 text-primary-400" : "bg-amber-500/20 text-amber-400") flex items-center justify-center font-bold text-sm">
+                    @(Venta.TipoComprobante == TipoComprobante.Factura ? "F" : Venta.TipoComprobante == TipoComprobante.Boleta ? "B" : "T")
+                </div>
+                <div>
+                    <h3 class="text-base font-bold text-surface-100">
+                        @GetDocumentTitle(Venta.TipoComprobante)
+                    </h3>
+                    <p class="text-xs text-surface-400 font-mono">@Venta.NumeroComprobante</p>
+                </div>
+            </div>
+            <button @onclick="Close" class="p-1.5 text-surface-400 hover:text-surface-100 hover:bg-surface-800 rounded-lg transition-colors">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+
+        @if (!string.IsNullOrEmpty(feedbackMessage))
+        {
+            <div class="p-3 rounded-lg text-xs @(isErrorFeedback ? "bg-rose-500/20 text-rose-300 border border-rose-500/30" : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30") flex items-center justify-between">
+                <span>@feedbackMessage</span>
+                <button @onclick="() => feedbackMessage = null" class="text-surface-400 hover:text-surface-200">×</button>
+            </div>
+        }
+
+        <!-- Thermal Receipt Container (Printable) -->
+        <div class="bg-white text-black p-5 rounded-xl shadow-inner font-mono text-xs printable-ticket max-h-[60vh] overflow-y-auto border border-gray-200">
+            <!-- Business Info -->
+            <div class="text-center space-y-1 pb-3 border-b border-dashed border-gray-400">
+                <p class="text-sm font-bold tracking-tight uppercase">@empresa.RazonSocial</p>
+                <p class="text-[11px] text-gray-700">RUC: <span class="font-bold">@empresa.Ruc</span></p>
+                <p class="text-[10px] text-gray-600">@empresa.Titular</p>
+                <p class="text-[10px] text-gray-600">@empresa.Direccion</p>
+                <p class="text-[10px] text-gray-600">Tel: @empresa.Telefono</p>
+                <p class="text-[9px] font-semibold text-gray-500 mt-0.5">@empresa.RegimenTributario</p>
+            </div>
+
+            <!-- Document Box -->
+            <div class="my-3 py-2 px-3 text-center border-2 border-black rounded-lg space-y-0.5 bg-gray-50">
+                <p class="font-bold text-xs uppercase tracking-wider">
+                    @GetDocumentTitle(Venta.TipoComprobante)
+                </p>
+                <p class="font-extrabold text-sm tracking-widest">
+                    @Venta.NumeroComprobante
+                </p>
+            </div>
+
+            <!-- Watermark for voided / converted sales -->
+            @if (Venta.Estado == EstadoVenta.Anulada)
+            {
+                <div class="my-2 p-2 bg-red-100 border border-red-400 text-red-700 text-center font-bold text-xs uppercase tracking-wider rounded">
+                    *** COMPROBANTE ANULADO ***
+                    @if (!string.IsNullOrEmpty(Venta.MotivoAnulacion))
+                    {
+                        <p class="text-[10px] font-normal mt-0.5">Motivo: @Venta.MotivoAnulacion</p>
+                    }
+                </div>
+            }
+            else if (Venta.ComprobanteDestinoId.HasValue)
+            {
+                <div class="my-2 p-1.5 bg-blue-100 border border-blue-400 text-blue-800 text-center font-bold text-[10px] uppercase rounded">
+                    ✓ TICKET CONVERTIDO A COMPROBANTE OFICIAL
+                </div>
+            }
+            else if (Venta.TicketOrigenId.HasValue)
+            {
+                <div class="my-1 text-[10px] text-gray-600 text-center italic">
+                    (Generado a partir del Ticket #@Venta.TicketOrigenId)
+                </div>
+            }
+
+            <!-- Metadata -->
+            <div class="py-2 space-y-1 text-[11px] border-b border-dashed border-gray-400">
+                <div class="flex justify-between">
+                    <span class="text-gray-600">FECHA:</span>
+                    <span class="font-semibold">@Venta.Fecha.ToString("dd/MM/yyyy HH:mm:ss")</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">CAJERO:</span>
+                    <span>@(Venta.Usuario?.Nombre ?? "Caja Principal")</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">CLIENTE:</span>
+                    <span class="font-semibold uppercase text-right max-w-[200px] truncate">@Venta.ClienteNombre</span>
+                </div>
+                @if (!string.IsNullOrEmpty(Venta.ClienteDocumento))
+                {
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">@(Venta.ClienteTipoDocumento == TipoDocumentoIdentidad.RUC ? "RUC:" : "DNI:"):</span>
+                        <span class="font-semibold font-mono">@Venta.ClienteDocumento</span>
+                    </div>
+                }
+                @if (!string.IsNullOrEmpty(Venta.ClienteDireccion))
+                {
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">DIR:</span>
+                        <span class="text-right text-[10px] max-w-[200px] truncate">@Venta.ClienteDireccion</span>
+                    </div>
+                }
+                <div class="flex justify-between">
+                    <span class="text-gray-600">FORMA DE PAGO:</span>
+                    <span class="font-semibold uppercase">@Venta.MetodoPago @(Venta.EsFiado ? "(CRÉDITO/FIADO)" : "")</span>
+                </div>
+            </div>
+
+            <!-- Line Items -->
+            <div class="py-2 border-b border-dashed border-gray-400">
+                <table class="w-full text-[11px]">
+                    <thead>
+                        <tr class="border-b border-gray-300 text-left text-[10px] text-gray-600">
+                            <th class="py-1 w-10">CANT</th>
+                            <th class="py-1">DESCRIPCIÓN</th>
+                            <th class="py-1 text-right w-14">P.UNIT</th>
+                            <th class="py-1 text-right w-16">TOTAL</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Venta.Detalles)
+                        {
+                            <tr class="border-b border-gray-100">
+                                <td class="py-1 font-semibold align-top">@item.Cantidad.ToString("G29")</td>
+                                <td class="py-1 align-top">
+                                    <div class="font-medium text-[11px] leading-tight">@item.Producto.Nombre</div>
+                                </td>
+                                <td class="py-1 text-right align-top">@item.PrecioUnitario.ToString("N2")</td>
+                                <td class="py-1 text-right font-bold align-top">@item.Subtotal.ToString("N2")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Totals & Taxes Breakdown -->
+            <div class="py-2 space-y-1 text-[11px] border-b border-dashed border-gray-400">
+                <div class="flex justify-between">
+                    <span class="text-gray-600">OP. GRAVADA (Base):</span>
+                    <span>S/ @Venta.Subtotal.ToString("N2")</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">I.G.V. (18.00%):</span>
+                    <span>S/ @Venta.Igv.ToString("N2")</span>
+                </div>
+                <div class="flex justify-between text-sm font-extrabold pt-1 border-t border-gray-300">
+                    <span>IMPORTE TOTAL:</span>
+                    <span>S/ @Venta.Total.ToString("N2")</span>
+                </div>
+            </div>
+
+            <!-- Amount in words -->
+            <div class="py-2 text-[10px] font-semibold uppercase text-gray-800 border-b border-dashed border-gray-400">
+                @NumeroALetrasConverter.Convertir(Venta.Total)
+            </div>
+
+            <!-- Cash and change details if cash payment -->
+            @if (Venta.MetodoPago == MetodoPago.Efectivo && Venta.MontoRecibido.HasValue)
+            {
+                <div class="py-1.5 text-[10px] space-y-0.5 border-b border-dashed border-gray-400 text-gray-700">
+                    <div class="flex justify-between">
+                        <span>IMPORTE RECIBIDO:</span>
+                        <span class="font-mono">S/ @Venta.MontoRecibido.Value.ToString("N2")</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>VUELTO ENTREGADO:</span>
+                        <span class="font-mono font-bold">S/ @((Venta.Vuelto ?? 0).ToString("N2"))</span>
+                    </div>
+                </div>
+            }
+
+            <!-- SUNAT QR Code & Legal Footer -->
+            <div class="pt-3 text-center space-y-2">
+                <div class="flex items-center justify-center gap-3">
+                    <!-- High visual fidelity simulated SUNAT QR code -->
+                    <div class="w-20 h-20 bg-gray-900 p-1.5 rounded flex flex-col justify-between items-center text-[7px] text-white font-mono shadow-sm">
+                        <div class="flex justify-between w-full">
+                            <div class="w-3.5 h-3.5 bg-white border border-black flex items-center justify-center"><div class="w-1.5 h-1.5 bg-black"></div></div>
+                            <div class="w-3.5 h-3.5 bg-white border border-black flex items-center justify-center"><div class="w-1.5 h-1.5 bg-black"></div></div>
+                        </div>
+                        <div class="text-center font-bold tracking-tighter">SUNAT QR</div>
+                        <div class="flex justify-between w-full">
+                            <div class="w-3.5 h-3.5 bg-white border border-black flex items-center justify-center"><div class="w-1.5 h-1.5 bg-black"></div></div>
+                            <div class="w-2 h-2 bg-white"></div>
+                        </div>
+                    </div>
+                    <div class="text-left text-[9px] text-gray-600 space-y-0.5">
+                        <p class="font-semibold text-black">CÓDIGO HASH SUNAT:</p>
+                        <p class="font-mono text-[8px] text-gray-500 break-all max-w-[170px]">
+                            @(GenerateFiscalHash(Venta))
+                        </p>
+                        <p class="text-[8px] text-gray-500">
+                            @(Venta.TipoComprobante == TipoComprobante.Factura 
+                                ? "Representación impresa de la FACTURA ELECTRÓNICA" 
+                                : Venta.TipoComprobante == TipoComprobante.Boleta 
+                                ? "Representación impresa de la BOLETA DE VENTA ELECTRÓNICA" 
+                                : "DOCUMENTO DE CONTROL INTERNO")
+                        </p>
+                    </div>
+                </div>
+
+                <p class="text-[9px] text-gray-500 pt-1">
+                    Consulte su comprobante en <span class="font-semibold">www.sunat.gob.pe</span>
+                </p>
+                <p class="text-[10px] font-bold text-gray-700">@empresa.MensajePie</p>
+            </div>
+        </div>
+
+        <!-- Conversion Form (if toggled) -->
+        @if (showConversionForm)
+        {
+            <div class="p-4 bg-surface-850 border border-primary-500/30 rounded-xl space-y-3">
+                <div class="flex items-center justify-between">
+                    <h4 class="text-sm font-bold text-primary-300 flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>
+                        Convertir Ticket a Comprobante Oficial
+                    </h4>
+                    <button @onclick="() => showConversionForm = false" class="text-xs text-surface-400 hover:text-surface-200">Cancelar</button>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <button type="button" @onclick="() => conversionTargetTipo = TipoComprobante.Boleta"
+                            class="p-2.5 rounded-lg border text-xs font-semibold transition-all @(conversionTargetTipo == TipoComprobante.Boleta ? "bg-primary-600 text-white border-primary-500 shadow-md shadow-primary-500/20" : "bg-surface-800 text-surface-300 border-surface-700 hover:bg-surface-750")">
+                        📄 Boleta de Venta (B001)
+                    </button>
+                    <button type="button" @onclick="() => conversionTargetTipo = TipoComprobante.Factura"
+                            class="p-2.5 rounded-lg border text-xs font-semibold transition-all @(conversionTargetTipo == TipoComprobante.Factura ? "bg-purple-600 text-white border-purple-500 shadow-md shadow-purple-500/20" : "bg-surface-800 text-surface-300 border-surface-700 hover:bg-surface-750")">
+                        🏢 Factura con RUC (F001)
+                    </button>
+                </div>
+
+                @if (conversionTargetTipo == TipoComprobante.Factura)
+                {
+                    <div class="space-y-2 pt-1">
+                        <div>
+                            <label class="block text-[11px] font-medium text-surface-300 mb-1">
+                                RUC de la Empresa / Cliente <span class="text-rose-400">* (11 dígitos)</span>
+                            </label>
+                            <input type="text" @bind="conversionDoc" maxlength="11"
+                                   placeholder="Ej: 20123456789 o 10456789123"
+                                   class="w-full px-3 py-2 bg-surface-900 border border-surface-700 rounded-lg text-surface-100 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-purple-500" />
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-medium text-surface-300 mb-1">
+                                Razón Social <span class="text-rose-400">*</span>
+                            </label>
+                            <input type="text" @bind="conversionNombre"
+                                   placeholder="Nombre o Razón Social oficial"
+                                   class="w-full px-3 py-2 bg-surface-900 border border-surface-700 rounded-lg text-surface-100 text-xs focus:outline-none focus:ring-1 focus:ring-purple-500" />
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-medium text-surface-300 mb-1">Dirección Fiscal (Opcional)</label>
+                            <input type="text" @bind="conversionDireccion"
+                                   placeholder="Dirección fiscal del cliente"
+                                   class="w-full px-3 py-2 bg-surface-900 border border-surface-700 rounded-lg text-surface-100 text-xs focus:outline-none focus:ring-1 focus:ring-purple-500" />
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="space-y-2 pt-1">
+                        <div>
+                            <label class="block text-[11px] font-medium text-surface-300 mb-1">
+                                DNI o RUC del Cliente @(Venta.Total > 700 ? "(Obligatorio > S/ 700)" : "(Opcional)")
+                            </label>
+                            <input type="text" @bind="conversionDoc" maxlength="11"
+                                   placeholder="8 dígitos para DNI u 11 para RUC"
+                                   class="w-full px-3 py-2 bg-surface-900 border border-surface-700 rounded-lg text-surface-100 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-medium text-surface-300 mb-1">Nombres del Cliente</label>
+                            <input type="text" @bind="conversionNombre"
+                                   placeholder="Clientes Varios o Nombre del cliente"
+                                   class="w-full px-3 py-2 bg-surface-900 border border-surface-700 rounded-lg text-surface-100 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                        </div>
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(conversionError))
+                {
+                    <p class="text-xs text-rose-400 font-medium">@conversionError</p>
+                }
+
+                <button @onclick="ExecuteConversion" disabled="@isConverting"
+                        class="w-full py-2.5 bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-500 hover:to-primary-400 text-white text-xs font-bold rounded-lg shadow-md transition-all flex items-center justify-center gap-2">
+                    @if (isConverting)
+                    {
+                        <div class="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                        <span>Generando Comprobante...</span>
+                    }
+                    else
+                    {
+                        <span>Confirmar y Emitir @(conversionTargetTipo == TipoComprobante.Factura ? "Factura F001" : "Boleta B001")</span>
+                    }
+                </button>
+            </div>
+        }
+
+        <!-- Cancellation Form (if toggled) -->
+        @if (showAnulacionForm)
+        {
+            <div class="p-4 bg-rose-500/10 border border-rose-500/30 rounded-xl space-y-3">
+                <div class="flex items-center justify-between">
+                    <h4 class="text-sm font-bold text-rose-400 flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" /></svg>
+                        Anular Comprobante / Ticket
+                    </h4>
+                    <button @onclick="() => showAnulacionForm = false" class="text-xs text-surface-400 hover:text-surface-200">Cancelar</button>
+                </div>
+                <p class="text-xs text-rose-300">
+                    Al anular este documento, los <strong>@Venta.Detalles.Sum(d => d.Cantidad) productos</strong> se devolverán automáticamente al inventario de stock.
+                </p>
+                <div>
+                    <label class="block text-[11px] font-medium text-surface-300 mb-1">Motivo de Anulación</label>
+                    <input type="text" @bind="motivoAnulacion"
+                           placeholder="Ej: Cliente canceló pedido / error en digitación"
+                           class="w-full px-3 py-2 bg-surface-900 border border-surface-700 rounded-lg text-surface-100 text-xs focus:outline-none focus:ring-1 focus:ring-rose-500" />
+                </div>
+                @if (!string.IsNullOrEmpty(anulacionError))
+                {
+                    <p class="text-xs text-rose-400 font-medium">@anulacionError</p>
+                }
+                <button @onclick="ExecuteAnulacion" disabled="@isAnulating"
+                        class="w-full py-2 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-2">
+                    @if (isAnulating)
+                    {
+                        <div class="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                        <span>Anulando y reponiendo stock...</span>
+                    }
+                    else
+                    {
+                        <span>Confirmar Anulación y Devolver Stock</span>
+                    }
+                </button>
+            </div>
+        }
+
+        <!-- Bottom Action Buttons -->
+        <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-surface-800">
+            <div class="flex items-center gap-2">
+                <!-- Print Button -->
+                <button @onclick="PrintReceipt"
+                        class="px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white rounded-xl text-xs font-semibold transition-all flex items-center gap-2 shadow-lg shadow-primary-600/20">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.656h10.5Z" />
+                    </svg>
+                    Imprimir Ticket (80mm)
+                </button>
+
+                <!-- Copy Text Button -->
+                <button @onclick="CopyTicketText"
+                        class="px-3 py-2 bg-surface-800 hover:bg-surface-700 text-surface-200 rounded-xl text-xs font-medium transition-colors flex items-center gap-1.5">
+                    <svg class="w-4 h-4 text-surface-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184" />
+                    </svg>
+                    Copiar
+                </button>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <!-- Convert Ticket Button (only if active ticket not yet converted) -->
+                @if (Venta.TipoComprobante == TipoComprobante.TicketInterno && Venta.Estado == EstadoVenta.Emitida && !Venta.ComprobanteDestinoId.HasValue && !showConversionForm)
+                {
+                    <button @onclick="() => { showConversionForm = true; showAnulacionForm = false; }"
+                            class="px-3 py-2 bg-purple-600/20 text-purple-300 hover:bg-purple-600/30 border border-purple-500/30 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>
+                        Convertir Ticket
+                    </button>
+                }
+
+                <!-- Cancel / Anulate Button -->
+                @if (Venta.Estado == EstadoVenta.Emitida && !Venta.ComprobanteDestinoId.HasValue && !showAnulacionForm)
+                {
+                    <button @onclick="() => { showAnulacionForm = true; showConversionForm = false; }"
+                            class="px-3 py-2 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5"
+                            title="Anula y devuelve el stock al almacén">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" /></svg>
+                        Anular / Devolver Stock
+                    </button>
+                }
+
+                <!-- Close Button -->
+                <button @onclick="Close"
+                        class="px-4 py-2 bg-surface-800 hover:bg-surface-700 text-surface-300 rounded-xl text-xs font-medium transition-colors">
+                    Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public Venta Venta { get; set; } = null!;
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    [Parameter]
+    public EventCallback<Venta> OnVentaUpdated { get; set; }
+
+    private ConfiguracionEmpresa empresa = new();
+    private bool showConversionForm;
+    private bool showAnulacionForm;
+    private TipoComprobante conversionTargetTipo = TipoComprobante.Boleta;
+    private string conversionNombre = "";
+    private string conversionDoc = "";
+    private string conversionDireccion = "";
+    private string? conversionError;
+    private bool isConverting;
+
+    private string motivoAnulacion = "Cancelación a pedido del cliente";
+    private string? anulacionError;
+    private bool isAnulating;
+
+    private string? feedbackMessage;
+    private bool isErrorFeedback;
+
+    protected override void OnInitialized()
+    {
+        empresa = EmpresaSvc.GetConfiguracion();
+        conversionNombre = Venta.ClienteNombre == "Clientes Varios" ? "" : Venta.ClienteNombre;
+        conversionDoc = Venta.ClienteDocumento ?? "";
+        conversionDireccion = Venta.ClienteDireccion ?? "";
+    }
+
+    private string GetDocumentTitle(TipoComprobante tipo) => tipo switch
+    {
+        TipoComprobante.Factura => "FACTURA ELECTRÓNICA",
+        TipoComprobante.Boleta => "BOLETA DE VENTA ELECTRÓNICA",
+        _ => "TICKET DE VENTA INTERNO"
+    };
+
+    private string GenerateFiscalHash(Venta v)
+    {
+        var raw = $"{empresa.Ruc}|{(int)v.TipoComprobante}|{v.NumeroComprobante}|{v.Total:F2}|{v.Fecha:yyyyMMddHHmmss}";
+        using var sha = System.Security.Cryptography.SHA256.Create();
+        var bytes = sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(raw));
+        return Convert.ToBase64String(bytes).Substring(0, 28) + "=";
+    }
+
+    private async Task PrintReceipt()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("window.print");
+        }
+        catch (Exception ex)
+        {
+            feedbackMessage = $"No se pudo abrir el diálogo de impresión: {ex.Message}";
+            isErrorFeedback = true;
+        }
+    }
+
+    private async Task CopyTicketText()
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("================================");
+        sb.AppendLine($"   {empresa.RazonSocial}");
+        sb.AppendLine($"   RUC: {empresa.Ruc}");
+        sb.AppendLine($"   {empresa.Direccion}");
+        sb.AppendLine("================================");
+        sb.AppendLine($" {GetDocumentTitle(Venta.TipoComprobante)}");
+        sb.AppendLine($" NUM: {Venta.NumeroComprobante}");
+        sb.AppendLine($" FECHA: {Venta.Fecha:dd/MM/yyyy HH:mm:ss}");
+        sb.AppendLine($" CLIENTE: {Venta.ClienteNombre}");
+        if (!string.IsNullOrEmpty(Venta.ClienteDocumento))
+            sb.AppendLine($" DOC: {Venta.ClienteDocumento}");
+        sb.AppendLine("--------------------------------");
+        sb.AppendLine("CANT DESCRIPCION    P.UNIT TOTAL");
+        foreach (var d in Venta.Detalles)
+        {
+            sb.AppendLine($"{d.Cantidad,4} {d.Producto.Nombre,-15} {d.PrecioUnitario,6:N2} {d.Subtotal,6:N2}");
+        }
+        sb.AppendLine("--------------------------------");
+        sb.AppendLine($"OP. GRAVADA:   S/ {Venta.Subtotal:N2}");
+        sb.AppendLine($"IGV (18%):     S/ {Venta.Igv:N2}");
+        sb.AppendLine($"TOTAL A PAGAR: S/ {Venta.Total:N2}");
+        sb.AppendLine(NumeroALetrasConverter.Convertir(Venta.Total));
+        sb.AppendLine("================================");
+        sb.AppendLine(" ¡Gracias por su compra!");
+
+        try
+        {
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", sb.ToString());
+            feedbackMessage = "✓ Texto del comprobante copiado al portapapeles.";
+            isErrorFeedback = false;
+        }
+        catch
+        {
+            feedbackMessage = "No se pudo copiar automáticamente al portapapeles.";
+            isErrorFeedback = true;
+        }
+    }
+
+    private async Task ExecuteConversion()
+    {
+        conversionError = null;
+        isConverting = true;
+
+        var (nuevoComprobante, error) = await VentaSvc.ConvertirTicketAComprobanteAsync(
+            Venta.Id,
+            conversionTargetTipo,
+            conversionNombre,
+            conversionDoc,
+            conversionDireccion);
+
+        if (error != null)
+        {
+            conversionError = error;
+            isConverting = false;
+            return;
+        }
+
+        isConverting = false;
+        showConversionForm = false;
+        feedbackMessage = $"✓ Ticket convertido exitosamente en {nuevoComprobante!.NumeroComprobante}";
+        isErrorFeedback = false;
+
+        // Switch displayed sale to newly emitted document
+        Venta = nuevoComprobante;
+        if (OnVentaUpdated.HasDelegate)
+        {
+            await OnVentaUpdated.InvokeAsync(nuevoComprobante);
+        }
+    }
+
+    private async Task ExecuteAnulacion()
+    {
+        anulacionError = null;
+        isAnulating = true;
+
+        var error = await VentaSvc.AnularVentaAsync(Venta.Id, motivoAnulacion);
+        if (error != null)
+        {
+            anulacionError = error;
+            isAnulating = false;
+            return;
+        }
+
+        isAnulating = false;
+        showAnulacionForm = false;
+        Venta.Estado = EstadoVenta.Anulada;
+        Venta.MotivoAnulacion = motivoAnulacion;
+        feedbackMessage = "✓ Comprobante anulado y stock devuelto al almacén exitosamente.";
+        isErrorFeedback = false;
+
+        if (OnVentaUpdated.HasDelegate)
+        {
+            await OnVentaUpdated.InvokeAsync(Venta);
+        }
+    }
+
+    private async Task Close()
+    {
+        if (OnClose.HasDelegate)
+        {
+            await OnClose.InvokeAsync();
+        }
+    }
+}

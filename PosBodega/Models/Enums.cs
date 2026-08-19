@@ -16,7 +16,21 @@ public enum MetodoPago
 public enum TipoComprobante
 {
     Boleta,
+    Factura,
     TicketInterno
+}
+
+public enum EstadoVenta
+{
+    Emitida,
+    Anulada
+}
+
+public enum TipoDocumentoIdentidad
+{
+    SinDocumento,
+    DNI,
+    RUC
 }
 
 public enum UnidadMedida
@@ -25,3 +39,4 @@ public enum UnidadMedida
     Kilogramo,
     Litro
 }
+
