@@ -30,12 +30,23 @@ public class ReporteService
             .Where(p => p.Activo && p.StockActual <= p.StockMinimo)
             .CountAsync();
 
+        var limitVencimiento = hoy.AddDays(15);
+        var productosVencidos = await _db.Productos
+            .Where(p => p.Activo && p.FechaVencimiento != null && p.FechaVencimiento < hoy && p.StockActual > 0)
+            .CountAsync();
+
+        var productosPorVencer = await _db.Productos
+            .Where(p => p.Activo && p.FechaVencimiento != null && p.FechaVencimiento >= hoy && p.FechaVencimiento <= limitVencimiento && p.StockActual > 0)
+            .CountAsync();
+
         return new ResumenDiario
         {
             VentasDelDia = ventasHoy.Count,
             TotalVentasDelDia = ventasHoy.Sum(v => v.Total),
             TotalFiados = totalFiados,
-            ProductosStockBajo = productosStockBajo
+            ProductosStockBajo = productosStockBajo,
+            ProductosPorVencer = productosPorVencer,
+            ProductosVencidos = productosVencidos
         };
     }
 
@@ -96,6 +107,8 @@ public class ResumenDiario
     public decimal TotalVentasDelDia { get; set; }
     public decimal TotalFiados { get; set; }
     public int ProductosStockBajo { get; set; }
+    public int ProductosPorVencer { get; set; }
+    public int ProductosVencidos { get; set; }
 }
 
 public class ProductoVendido

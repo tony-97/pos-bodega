@@ -56,7 +56,7 @@ public class CompraService
 
             _db.Compras.Add(compra);
 
-            // Increment stock for each product
+            // Increment stock for each product and update expiration date if provided
             foreach (var detalle in detalles)
             {
                 var producto = await _db.Productos.FindAsync(detalle.ProductoId);
@@ -65,6 +65,11 @@ public class CompraService
                     producto.StockActual += detalle.Cantidad;
                     // Update cost price if different
                     producto.Costo = detalle.CostoUnitario;
+                    // Update expiration date if specified in purchase detail
+                    if (detalle.FechaVencimiento.HasValue)
+                    {
+                        producto.FechaVencimiento = detalle.FechaVencimiento.Value;
+                    }
                 }
             }
 

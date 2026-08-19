@@ -8,97 +8,160 @@
     <div class="flex items-center justify-between">
         <div>
             <h1 class="text-2xl font-bold text-surface-50">Productos</h1>
-            <p class="text-surface-400 text-sm mt-1">Gestión del catálogo de productos</p>
+            <p class="text-surface-400 text-sm mt-1">Gestión del catálogo, control de stock y fechas de vencimiento</p>
         </div>
-        <button @onclick="ShowCreateForm" class="flex items-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-500 text-white rounded-xl font-medium text-sm transition-colors">
+        <button @onclick="ShowCreateForm" class="flex items-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-500 text-white rounded-xl font-medium text-sm transition-colors shadow-lg shadow-primary-600/20">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
             Nuevo Producto
         </button>
     </div>
 
-    <!-- Search -->
-    <div class="relative max-w-md">
-        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-            <svg class="w-5 h-5 text-surface-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
+    <!-- Filters & Search Bar -->
+    <div class="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center justify-between">
+        <div class="relative max-w-md flex-1">
+            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                <svg class="w-5 h-5 text-surface-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
+            </div>
+            <input type="text" @bind="searchQuery" @bind:event="oninput" placeholder="Buscar por nombre o código de barras..."
+                   class="w-full pl-11 pr-4 py-2.5 bg-surface-900 border border-surface-800 rounded-xl text-surface-100 placeholder-surface-500 focus:outline-none focus:ring-2 focus:ring-primary-500/50 text-sm" />
         </div>
-        <input type="text" @bind="searchQuery" @bind:event="oninput" placeholder="Buscar producto..."
-               class="w-full pl-11 pr-4 py-2.5 bg-surface-900 border border-surface-800 rounded-xl text-surface-100 placeholder-surface-500 focus:outline-none focus:ring-2 focus:ring-primary-500/50 text-sm" />
+
+        <!-- Quick filter tabs -->
+        <div class="flex items-center gap-2 overflow-x-auto pb-1">
+            <button @onclick='() => currentFilter = "todos"'
+                    class="px-3.5 py-2 rounded-xl text-xs font-medium transition-all @(currentFilter == "todos" ? "bg-primary-600 text-white shadow-sm" : "bg-surface-900 border border-surface-800 text-surface-400 hover:text-surface-200 hover:bg-surface-850")">
+                Todos (@productos.Count)
+            </button>
+            <button @onclick='() => currentFilter = "porVencer"'
+                    class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium transition-all @(currentFilter == "porVencer" ? "bg-amber-600 text-white shadow-sm" : "bg-surface-900 border border-surface-800 text-amber-400 hover:bg-amber-500/10")">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
+                Vencimientos (@CountExpiring)
+            </button>
+            <button @onclick='() => currentFilter = "stockBajo"'
+                    class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium transition-all @(currentFilter == "stockBajo" ? "bg-rose-600 text-white shadow-sm" : "bg-surface-900 border border-surface-800 text-rose-400 hover:bg-rose-500/10")">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" /></svg>
+                Stock Bajo (@CountLowStock)
+            </button>
+        </div>
     </div>
 
     <!-- Table -->
-    <div class="bg-surface-900 border border-surface-800 rounded-xl overflow-hidden">
-        <table class="w-full text-sm">
-            <thead>
-                <tr class="border-b border-surface-800 bg-surface-900/50">
-                    <th class="text-left py-3 px-4 text-surface-400 font-medium">Producto</th>
-                    <th class="text-left py-3 px-4 text-surface-400 font-medium">Categoría</th>
-                    <th class="text-right py-3 px-4 text-surface-400 font-medium">Costo</th>
-                    <th class="text-right py-3 px-4 text-surface-400 font-medium">P. Venta</th>
-                    <th class="text-right py-3 px-4 text-surface-400 font-medium">Stock</th>
-                    <th class="text-right py-3 px-4 text-surface-400 font-medium">Mínimo</th>
-                    <th class="text-center py-3 px-4 text-surface-400 font-medium">Estado</th>
-                    <th class="text-center py-3 px-4 text-surface-400 font-medium">Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var p in FilteredProducts)
-                {
-                    <tr class="border-b border-surface-800/50 hover:bg-surface-800/30 transition-colors">
-                        <td class="py-3 px-4">
-                            <p class="text-surface-200 font-medium">@p.Nombre</p>
-                            @if (!string.IsNullOrEmpty(p.CodigoBarras))
-                            {
-                                <p class="text-xs text-surface-500 mt-0.5">@p.CodigoBarras</p>
-                            }
-                        </td>
-                        <td class="py-3 px-4 text-surface-400">@p.Categoria.Nombre</td>
-                        <td class="py-3 px-4 text-right text-surface-400 font-mono">S/ @p.Costo.ToString("N2")</td>
-                        <td class="py-3 px-4 text-right text-surface-200 font-mono font-medium">S/ @p.PrecioVenta.ToString("N2")</td>
-                        <td class="py-3 px-4 text-right font-mono @(p.StockActual <= 0 ? "text-rose-400" : p.StockActual <= p.StockMinimo ? "text-amber-400" : "text-surface-200")">
-                            @p.StockActual
-                        </td>
-                        <td class="py-3 px-4 text-right text-surface-500 font-mono">@p.StockMinimo</td>
-                        <td class="py-3 px-4 text-center">
-                            @if (p.StockActual <= 0)
-                            {
-                                <span class="px-2 py-0.5 text-xs rounded-full bg-rose-500/10 text-rose-400">Agotado</span>
-                            }
-                            else if (p.StockActual <= p.StockMinimo)
-                            {
-                                <span class="px-2 py-0.5 text-xs rounded-full bg-amber-500/10 text-amber-400">Bajo</span>
-                            }
-                            else
-                            {
-                                <span class="px-2 py-0.5 text-xs rounded-full bg-emerald-500/10 text-emerald-400">OK</span>
-                            }
-                        </td>
-                        <td class="py-3 px-4 text-center">
-                            <button @onclick="() => ShowEditForm(p)" class="p-1.5 text-surface-500 hover:text-primary-400 transition-colors" title="Editar">
-                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" /></svg>
-                            </button>
-                        </td>
+    <div class="bg-surface-900 border border-surface-800 rounded-xl overflow-hidden shadow-xl shadow-black/20">
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="border-b border-surface-800 bg-surface-900/50">
+                        <th class="text-left py-3.5 px-4 text-surface-400 font-medium">Producto</th>
+                        <th class="text-left py-3.5 px-4 text-surface-400 font-medium">Categoría</th>
+                        <th class="text-right py-3.5 px-4 text-surface-400 font-medium">Costo</th>
+                        <th class="text-right py-3.5 px-4 text-surface-400 font-medium">P. Venta</th>
+                        <th class="text-right py-3.5 px-4 text-surface-400 font-medium">Stock</th>
+                        <th class="text-center py-3.5 px-4 text-surface-400 font-medium">Vencimiento</th>
+                        <th class="text-center py-3.5 px-4 text-surface-400 font-medium">Estado</th>
+                        <th class="text-center py-3.5 px-4 text-surface-400 font-medium">Acciones</th>
                     </tr>
-                }
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    @foreach (var p in FilteredProducts)
+                    {
+                        <tr class="border-b border-surface-800/50 hover:bg-surface-800/30 transition-colors">
+                            <td class="py-3.5 px-4">
+                                <p class="text-surface-200 font-medium">@p.Nombre</p>
+                                @if (!string.IsNullOrEmpty(p.CodigoBarras))
+                                {
+                                    <p class="text-xs text-surface-500 font-mono mt-0.5">@p.CodigoBarras</p>
+                                }
+                            </td>
+                            <td class="py-3.5 px-4 text-surface-400">@p.Categoria.Nombre</td>
+                            <td class="py-3.5 px-4 text-right text-surface-400 font-mono">S/ @p.Costo.ToString("N2")</td>
+                            <td class="py-3.5 px-4 text-right text-surface-200 font-mono font-medium">S/ @p.PrecioVenta.ToString("N2")</td>
+                            <td class="py-3.5 px-4 text-right font-mono @(p.StockActual <= 0 ? "text-rose-400" : p.StockActual <= p.StockMinimo ? "text-amber-400" : "text-surface-200")">
+                                <span class="font-bold">@p.StockActual</span>
+                                <span class="text-surface-600 text-xs block">Mín: @p.StockMinimo</span>
+                            </td>
+                            <!-- Expiration Date & Badge -->
+                            <td class="py-3.5 px-4 text-center">
+                                @if (p.FechaVencimiento.HasValue)
+                                {
+                                    <div class="inline-flex flex-col items-center">
+                                        <span class="text-xs font-mono text-surface-300">@p.FechaVencimiento.Value.ToString("dd/MM/yyyy")</span>
+                                        @if (p.EstaVencido)
+                                        {
+                                            <span class="mt-1 px-2 py-0.5 text-[11px] font-medium rounded-md bg-rose-500/15 text-rose-400 border border-rose-500/30">
+                                                Vencido (@Math.Abs(p.DiasParaVencer!.Value)d)
+                                            </span>
+                                        }
+                                        else if (p.PorVencer)
+                                        {
+                                            <span class="mt-1 px-2 py-0.5 text-[11px] font-medium rounded-md bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                                                Vence en @p.DiasParaVencer d
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="mt-1 px-2 py-0.5 text-[11px] font-medium rounded-md bg-emerald-500/10 text-emerald-400">
+                                                Vigente
+                                            </span>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span class="text-xs text-surface-600 italic">No perecible</span>
+                                }
+                            </td>
+                            <td class="py-3.5 px-4 text-center">
+                                @if (p.StockActual <= 0)
+                                {
+                                    <span class="px-2.5 py-1 text-xs rounded-full bg-rose-500/10 text-rose-400 font-medium">Agotado</span>
+                                }
+                                else if (p.StockActual <= p.StockMinimo)
+                                {
+                                    <span class="px-2.5 py-1 text-xs rounded-full bg-amber-500/10 text-amber-400 font-medium">Stock Bajo</span>
+                                }
+                                else
+                                {
+                                    <span class="px-2.5 py-1 text-xs rounded-full bg-emerald-500/10 text-emerald-400 font-medium">Disponible</span>
+                                }
+                            </td>
+                            <td class="py-3.5 px-4 text-center">
+                                <button @onclick="() => ShowEditForm(p)" class="p-2 rounded-lg bg-surface-800/60 text-surface-400 hover:text-primary-400 hover:bg-surface-800 transition-colors" title="Editar">
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" /></svg>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                    @if (!FilteredProducts.Any())
+                    {
+                        <tr>
+                            <td colspan="8" class="py-12 text-center text-surface-500">
+                                <svg class="w-12 h-12 mx-auto mb-2 text-surface-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
+                                No se encontraron productos con los criterios seleccionados.
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
     </div>
 
     <!-- Modal -->
     @if (showModal)
     {
         <div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" @onclick="CloseModal">
-            <div class="bg-surface-900 border border-surface-700 rounded-2xl w-full max-w-lg shadow-2xl" @onclick:stopPropagation>
+            <div class="bg-surface-900 border border-surface-700 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden" @onclick:stopPropagation>
                 <div class="p-6 border-b border-surface-800">
                     <h3 class="text-lg font-semibold text-surface-100">@(isEditing ? "Editar Producto" : "Nuevo Producto")</h3>
+                    <p class="text-xs text-surface-400 mt-1">Completa los datos del producto e ingresa fecha de vencimiento si es perecible.</p>
                 </div>
-                <div class="p-6 space-y-4">
+                <div class="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
                     <div>
-                        <label class="block text-sm text-surface-300 mb-1.5">Nombre *</label>
-                        <input type="text" @bind="editProduct.Nombre" class="w-full px-3 py-2.5 bg-surface-800 border border-surface-700 rounded-xl text-surface-100 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/50" />
+                        <label class="block text-sm text-surface-300 mb-1.5 font-medium">Nombre del Producto *</label>
+                        <input type="text" @bind="editProduct.Nombre" placeholder="Ej. Yogurt La Live Fresa 1L" class="w-full px-3 py-2.5 bg-surface-800 border border-surface-700 rounded-xl text-surface-100 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/50" />
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm text-surface-300 mb-1.5">Categoría *</label>
+                            <label class="block text-sm text-surface-300 mb-1.5 font-medium">Categoría *</label>
                             <select @bind="editProduct.CategoriaId" class="w-full px-3 py-2.5 bg-surface-800 border border-surface-700 rounded-xl text-surface-100 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/50">
                                 @foreach (var c in categorias)
                                 {
@@ -107,7 +170,7 @@
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm text-surface-300 mb-1.5">Unidad de Medida</label>
+                            <label class="block text-sm text-surface-300 mb-1.5 font-medium">Unidad de Medida</label>
                             <select @bind="editProduct.UnidadMedida" class="w-full px-3 py-2.5 bg-surface-800 border border-surface-700 rounded-xl text-surface-100 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/50">
                                 <option value="@UnidadMedida.Unidad">Unidad</option>
                                 <option value="@UnidadMedida.Kilogramo">Kilogramo</option>
@@ -116,33 +179,53 @@
                         </div>
                     </div>
                     <div>
-                        <label class="block text-sm text-surface-300 mb-1.5">Código de Barras</label>
-                        <input type="text" @bind="editProduct.CodigoBarras" class="w-full px-3 py-2.5 bg-surface-800 border border-surface-700 rounded-xl text-surface-100 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/50" placeholder="Opcional" />
+                        <label class="block text-sm text-surface-300 mb-1.5 font-medium">Código de Barras</label>
+                        <input type="text" @bind="editProduct.CodigoBarras" class="w-full px-3 py-2.5 bg-surface-800 border border-surface-700 rounded-xl text-surface-100 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/50 font-mono" placeholder="Opcional (ej. 7750123456789)" />
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm text-surface-300 mb-1.5">Costo (S/) *</label>
+                            <label class="block text-sm text-surface-300 mb-1.5 font-medium">Costo de Compra (S/) *</label>
                             <input type="number" @bind="editProduct.Costo" step="0.01" min="0" class="w-full px-3 py-2.5 bg-surface-800 border border-surface-700 rounded-xl text-surface-100 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/50" />
                         </div>
                         <div>
-                            <label class="block text-sm text-surface-300 mb-1.5">P. Venta (S/) *</label>
+                            <label class="block text-sm text-surface-300 mb-1.5 font-medium">Precio de Venta (S/) *</label>
                             <input type="number" @bind="editProduct.PrecioVenta" step="0.01" min="0" class="w-full px-3 py-2.5 bg-surface-800 border border-surface-700 rounded-xl text-surface-100 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/50" />
                         </div>
                     </div>
-                    <div>
-                        <label class="block text-sm text-surface-300 mb-1.5">Stock Mínimo</label>
-                        <input type="number" @bind="editProduct.StockMinimo" step="1" min="0" class="w-full px-3 py-2.5 bg-surface-800 border border-surface-700 rounded-xl text-surface-100 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/50" />
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm text-surface-300 mb-1.5 font-medium">Stock Mínimo</label>
+                            <input type="number" @bind="editProduct.StockMinimo" step="1" min="0" class="w-full px-3 py-2.5 bg-surface-800 border border-surface-700 rounded-xl text-surface-100 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/50" />
+                        </div>
+                        <div>
+                            <label class="block text-sm text-surface-300 mb-1.5 font-medium">
+                                Fecha de Vencimiento
+                                <span class="text-xs text-surface-500 font-normal block">Opcional para perecibles</span>
+                            </label>
+                            <div class="flex gap-2">
+                                <input type="date" @bind="editFechaVencimiento" class="w-full px-3 py-2.5 bg-surface-800 border border-surface-700 rounded-xl text-surface-100 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/50" />
+                                @if (editFechaVencimiento.HasValue)
+                                {
+                                    <button type="button" @onclick="() => editFechaVencimiento = null" class="px-2 py-1 text-xs bg-surface-800 hover:bg-surface-700 text-surface-400 hover:text-surface-200 rounded-lg border border-surface-700" title="Quitar fecha (no perecible)">
+                                        ✕
+                                    </button>
+                                }
+                            </div>
+                        </div>
                     </div>
 
                     @if (!string.IsNullOrEmpty(formError))
                     {
-                        <div class="p-2.5 bg-rose-500/10 border border-rose-500/20 rounded-lg text-rose-400 text-xs">@formError</div>
+                        <div class="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-400 text-xs flex items-center gap-2">
+                            <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" /></svg>
+                            <span>@formError</span>
+                        </div>
                     }
                 </div>
-                <div class="p-6 border-t border-surface-800 flex justify-end gap-3">
+                <div class="p-6 border-t border-surface-800 flex justify-end gap-3 bg-surface-900/50">
                     <button @onclick="CloseModal" class="px-4 py-2 text-sm text-surface-400 hover:text-surface-200 transition-colors">Cancelar</button>
-                    <button @onclick="SaveProduct" class="px-5 py-2 bg-primary-600 hover:bg-primary-500 text-white rounded-xl text-sm font-medium transition-colors">
-                        @(isEditing ? "Guardar" : "Crear")
+                    <button @onclick="SaveProduct" class="px-5 py-2.5 bg-primary-600 hover:bg-primary-500 text-white rounded-xl text-sm font-medium transition-colors shadow-lg shadow-primary-600/20">
+                        @(isEditing ? "Guardar Cambios" : "Crear Producto")
                     </button>
                 </div>
             </div>
@@ -154,15 +237,42 @@
     private List<Producto> productos = new();
     private List<Categoria> categorias = new();
     private string searchQuery = "";
+    private string currentFilter = "todos";
     private bool showModal;
     private bool isEditing;
     private Producto editProduct = new();
+    private DateTime? editFechaVencimiento;
     private string? formError;
 
-    private IEnumerable<Producto> FilteredProducts =>
-        string.IsNullOrWhiteSpace(searchQuery) ? productos :
-        productos.Where(p => p.Nombre.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
-                            (p.CodigoBarras != null && p.CodigoBarras.Contains(searchQuery)));
+    private int CountExpiring => productos.Count(p => p.FechaVencimiento.HasValue && (p.EstaVencido || p.PorVencer));
+    private int CountLowStock => productos.Count(p => p.StockActual <= p.StockMinimo);
+
+    private IEnumerable<Producto> FilteredProducts
+    {
+        get
+        {
+            var query = productos.AsEnumerable();
+
+            if (!string.IsNullOrWhiteSpace(searchQuery))
+            {
+                query = query.Where(p => p.Nombre.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+                                        (p.CodigoBarras != null && p.CodigoBarras.Contains(searchQuery)));
+            }
+
+            if (currentFilter == "porVencer")
+            {
+                query = query.Where(p => p.FechaVencimiento.HasValue && (p.EstaVencido || p.PorVencer))
+                             .OrderBy(p => p.FechaVencimiento);
+            }
+            else if (currentFilter == "stockBajo")
+            {
+                query = query.Where(p => p.StockActual <= p.StockMinimo)
+                             .OrderBy(p => p.StockActual);
+            }
+
+            return query;
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -180,6 +290,7 @@
     {
         isEditing = false;
         editProduct = new Producto { CategoriaId = categorias.FirstOrDefault()?.Id ?? 0, StockMinimo = 5 };
+        editFechaVencimiento = null;
         formError = null;
         showModal = true;
     }
@@ -191,8 +302,10 @@
         {
             Id = p.Id, Nombre = p.Nombre, CategoriaId = p.CategoriaId, UnidadMedida = p.UnidadMedida,
             CodigoBarras = p.CodigoBarras, Costo = p.Costo, PrecioVenta = p.PrecioVenta,
-            StockActual = p.StockActual, StockMinimo = p.StockMinimo, Activo = p.Activo
+            StockActual = p.StockActual, StockMinimo = p.StockMinimo, Activo = p.Activo,
+            FechaVencimiento = p.FechaVencimiento
         };
+        editFechaVencimiento = p.FechaVencimiento;
         formError = null;
         showModal = true;
     }
@@ -206,6 +319,8 @@
         { formError = "El nombre es obligatorio."; return; }
         if (editProduct.PrecioVenta <= 0)
         { formError = "El precio de venta debe ser mayor a cero."; return; }
+
+        editProduct.FechaVencimiento = editFechaVencimiento;
 
         try
         {
@@ -223,3 +338,4 @@
         }
     }
 }
+

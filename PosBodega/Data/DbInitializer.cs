@@ -9,6 +9,19 @@ public static class DbInitializer
     {
         db.Database.EnsureCreated();
 
+        // Ensure new columns exist on existing databases (safe migration)
+        try
+        {
+            db.Database.ExecuteSqlRaw("ALTER TABLE Productos ADD COLUMN FechaVencimiento TEXT;");
+        }
+        catch { /* Column already exists */ }
+
+        try
+        {
+            db.Database.ExecuteSqlRaw("ALTER TABLE CompraDetalles ADD COLUMN FechaVencimiento TEXT;");
+        }
+        catch { /* Column already exists */ }
+
         // 1. Ensure Vendedor user exists
         if (!db.Usuarios.Any(u => u.NombreUsuario == "vendedor"))
         {
@@ -59,19 +72,34 @@ public static class DbInitializer
             var catGolosinas = db.Categorias.FirstOrDefault(c => c.Nombre == "Golosinas")?.Id ?? 5;
 
             db.Productos.AddRange(
-                new Producto { Nombre = "Arroz Costeño Superior 1kg", CategoriaId = catAbarrotes, UnidadMedida = UnidadMedida.Kilogramo, CodigoBarras = "7750123456789", Costo = 4.20m, PrecioVenta = 4.80m, StockActual = 50, StockMinimo = 10, Activo = true },
-                new Producto { Nombre = "Aceite Primor Clásico 1L", CategoriaId = catAbarrotes, UnidadMedida = UnidadMedida.Litro, CodigoBarras = "7750123456790", Costo = 7.50m, PrecioVenta = 9.00m, StockActual = 30, StockMinimo = 8, Activo = true },
-                new Producto { Nombre = "Azúcar Rubia Dulfina 1kg", CategoriaId = catAbarrotes, UnidadMedida = UnidadMedida.Kilogramo, CodigoBarras = "7750123456791", Costo = 3.60m, PrecioVenta = 4.20m, StockActual = 40, StockMinimo = 10, Activo = true },
-                new Producto { Nombre = "Inca Kola 500ml NR", CategoriaId = catBebidas, UnidadMedida = UnidadMedida.Unidad, CodigoBarras = "7750123456792", Costo = 2.20m, PrecioVenta = 3.00m, StockActual = 48, StockMinimo = 12, Activo = true },
-                new Producto { Nombre = "Coca Cola 500ml NR", CategoriaId = catBebidas, UnidadMedida = UnidadMedida.Unidad, CodigoBarras = "7750123456793", Costo = 2.20m, PrecioVenta = 3.00m, StockActual = 48, StockMinimo = 12, Activo = true },
-                new Producto { Nombre = "Agua San Luis 625ml s/gas", CategoriaId = catBebidas, UnidadMedida = UnidadMedida.Unidad, CodigoBarras = "7750123456794", Costo = 1.20m, PrecioVenta = 2.00m, StockActual = 60, StockMinimo = 15, Activo = true },
-                new Producto { Nombre = "Detergente Ace 800g", CategoriaId = catLimpieza, UnidadMedida = UnidadMedida.Unidad, CodigoBarras = "7750123456795", Costo = 6.80m, PrecioVenta = 8.50m, StockActual = 20, StockMinimo = 5, Activo = true },
-                new Producto { Nombre = "Jabón Bolívar Blanco", CategoriaId = catLimpieza, UnidadMedida = UnidadMedida.Unidad, CodigoBarras = "7750123456796", Costo = 2.80m, PrecioVenta = 3.50m, StockActual = 25, StockMinimo = 6, Activo = true },
-                new Producto { Nombre = "Leche Gloria Azul 400g", CategoriaId = catLacteos, UnidadMedida = UnidadMedida.Unidad, CodigoBarras = "7750123456797", Costo = 3.60m, PrecioVenta = 4.30m, StockActual = 72, StockMinimo = 24, Activo = true },
-                new Producto { Nombre = "Yogurt La Live Fresa 1L", CategoriaId = catLacteos, UnidadMedida = UnidadMedida.Litro, CodigoBarras = "7750123456798", Costo = 5.50m, PrecioVenta = 7.00m, StockActual = 15, StockMinimo = 5, Activo = true },
-                new Producto { Nombre = "Galletas Chomp Naranja 40g", CategoriaId = catGolosinas, UnidadMedida = UnidadMedida.Unidad, CodigoBarras = "7750123456799", Costo = 1.20m, PrecioVenta = 1.80m, StockActual = 30, StockMinimo = 10, Activo = true },
-                new Producto { Nombre = "Chocolate Sublime Clásico 30g", CategoriaId = catGolosinas, UnidadMedida = UnidadMedida.Unidad, CodigoBarras = "7750123456800", Costo = 1.50m, PrecioVenta = 2.20m, StockActual = 40, StockMinimo = 10, Activo = true }
+                new Producto { Nombre = "Arroz Costeño Superior 1kg", CategoriaId = catAbarrotes, UnidadMedida = UnidadMedida.Kilogramo, CodigoBarras = "7750123456789", Costo = 4.20m, PrecioVenta = 4.80m, StockActual = 50, StockMinimo = 10, FechaVencimiento = DateTime.Today.AddMonths(8), Activo = true },
+                new Producto { Nombre = "Aceite Primor Clásico 1L", CategoriaId = catAbarrotes, UnidadMedida = UnidadMedida.Litro, CodigoBarras = "7750123456790", Costo = 7.50m, PrecioVenta = 9.00m, StockActual = 30, StockMinimo = 8, FechaVencimiento = DateTime.Today.AddMonths(6), Activo = true },
+                new Producto { Nombre = "Azúcar Rubia Dulfina 1kg", CategoriaId = catAbarrotes, UnidadMedida = UnidadMedida.Kilogramo, CodigoBarras = "7750123456791", Costo = 3.60m, PrecioVenta = 4.20m, StockActual = 40, StockMinimo = 10, FechaVencimiento = null, Activo = true },
+                new Producto { Nombre = "Inca Kola 500ml NR", CategoriaId = catBebidas, UnidadMedida = UnidadMedida.Unidad, CodigoBarras = "7750123456792", Costo = 2.20m, PrecioVenta = 3.00m, StockActual = 48, StockMinimo = 12, FechaVencimiento = DateTime.Today.AddMonths(3), Activo = true },
+                new Producto { Nombre = "Coca Cola 500ml NR", CategoriaId = catBebidas, UnidadMedida = UnidadMedida.Unidad, CodigoBarras = "7750123456793", Costo = 2.20m, PrecioVenta = 3.00m, StockActual = 48, StockMinimo = 12, FechaVencimiento = DateTime.Today.AddMonths(4), Activo = true },
+                new Producto { Nombre = "Agua San Luis 625ml s/gas", CategoriaId = catBebidas, UnidadMedida = UnidadMedida.Unidad, CodigoBarras = "7750123456794", Costo = 1.20m, PrecioVenta = 2.00m, StockActual = 60, StockMinimo = 15, FechaVencimiento = DateTime.Today.AddYears(1), Activo = true },
+                new Producto { Nombre = "Detergente Ace 800g", CategoriaId = catLimpieza, UnidadMedida = UnidadMedida.Unidad, CodigoBarras = "7750123456795", Costo = 6.80m, PrecioVenta = 8.50m, StockActual = 20, StockMinimo = 5, FechaVencimiento = null, Activo = true },
+                new Producto { Nombre = "Jabón Bolívar Blanco", CategoriaId = catLimpieza, UnidadMedida = UnidadMedida.Unidad, CodigoBarras = "7750123456796", Costo = 2.80m, PrecioVenta = 3.50m, StockActual = 25, StockMinimo = 6, FechaVencimiento = null, Activo = true },
+                new Producto { Nombre = "Leche Gloria Azul 400g", CategoriaId = catLacteos, UnidadMedida = UnidadMedida.Unidad, CodigoBarras = "7750123456797", Costo = 3.60m, PrecioVenta = 4.30m, StockActual = 72, StockMinimo = 24, FechaVencimiento = DateTime.Today.AddDays(25), Activo = true },
+                new Producto { Nombre = "Yogurt La Live Fresa 1L", CategoriaId = catLacteos, UnidadMedida = UnidadMedida.Litro, CodigoBarras = "7750123456798", Costo = 5.50m, PrecioVenta = 7.00m, StockActual = 15, StockMinimo = 5, FechaVencimiento = DateTime.Today.AddDays(6), Activo = true },
+                new Producto { Nombre = "Galletas Chomp Naranja 40g", CategoriaId = catGolosinas, UnidadMedida = UnidadMedida.Unidad, CodigoBarras = "7750123456799", Costo = 1.20m, PrecioVenta = 1.80m, StockActual = 30, StockMinimo = 10, FechaVencimiento = DateTime.Today.AddDays(45), Activo = true },
+                new Producto { Nombre = "Chocolate Sublime Clásico 30g", CategoriaId = catGolosinas, UnidadMedida = UnidadMedida.Unidad, CodigoBarras = "7750123456800", Costo = 1.50m, PrecioVenta = 2.20m, StockActual = 40, StockMinimo = 10, FechaVencimiento = DateTime.Today.AddMonths(3), Activo = true }
             );
+            db.SaveChanges();
+        }
+        else
+        {
+            // Populate expiration dates on existing seed items if they are currently null
+            var yogurt = db.Productos.FirstOrDefault(p => p.Nombre.Contains("Yogurt"));
+            if (yogurt != null && yogurt.FechaVencimiento == null)
+            {
+                yogurt.FechaVencimiento = DateTime.Today.AddDays(6);
+            }
+            var leche = db.Productos.FirstOrDefault(p => p.Nombre.Contains("Leche"));
+            if (leche != null && leche.FechaVencimiento == null)
+            {
+                leche.FechaVencimiento = DateTime.Today.AddDays(25);
+            }
             db.SaveChanges();
         }
 

@@ -15,4 +15,7 @@ public class CompraDetalle
     public decimal CostoUnitario { get; set; }
 
     public decimal Subtotal { get; set; }
+
+    public DateTime? FechaVencimiento { get; set; }
 }
+

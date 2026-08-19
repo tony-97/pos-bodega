@@ -67,6 +67,44 @@ public class ProductoService
             .ToListAsync();
     }
 
+    /// <summary>
+    /// Gets perishable products that are either expired or expiring within the specified number of days (default 15 days), with stock > 0.
+    /// </summary>
+    public async Task<List<Producto>> GetExpiringProductsAsync(int daysThreshold = 15)
+    {
+        var limitDate = DateTime.Today.AddDays(daysThreshold);
+        return await _db.Productos
+            .Include(p => p.Categoria)
+            .Where(p => p.Activo && p.FechaVencimiento != null && p.FechaVencimiento <= limitDate && p.StockActual > 0)
+            .OrderBy(p => p.FechaVencimiento)
+            .ToListAsync();
+    }
+
+    /// <summary>
+    /// Gets products that have already expired and still have stock > 0.
+    /// </summary>
+    public async Task<List<Producto>> GetExpiredProductsAsync()
+    {
+        var today = DateTime.Today;
+        return await _db.Productos
+            .Include(p => p.Categoria)
+            .Where(p => p.Activo && p.FechaVencimiento != null && p.FechaVencimiento < today && p.StockActual > 0)
+            .OrderBy(p => p.FechaVencimiento)
+            .ToListAsync();
+    }
+
+    /// <summary>
+    /// Gets all active products that have an expiration date configured.
+    /// </summary>
+    public async Task<List<Producto>> GetPerishableProductsAsync()
+    {
+        return await _db.Productos
+            .Include(p => p.Categoria)
+            .Where(p => p.Activo && p.FechaVencimiento != null)
+            .OrderBy(p => p.FechaVencimiento)
+            .ToListAsync();
+    }
+
     public async Task CreateAsync(Producto producto)
     {
         _db.Productos.Add(producto);

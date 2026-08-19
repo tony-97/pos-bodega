@@ -69,29 +69,47 @@
                     </div>
 
                     <!-- Add product line -->
-                    <div class="p-4 bg-surface-800/50 rounded-xl space-y-3">
-                        <p class="text-sm font-medium text-surface-300">Agregar Producto</p>
-                        <div class="grid grid-cols-12 gap-2">
-                            <div class="col-span-5">
+                    <div class="p-4 bg-surface-800/50 rounded-xl space-y-3 border border-surface-700/50">
+                        <p class="text-sm font-medium text-surface-200 flex items-center justify-between">
+                            <span>Agregar Producto al Detalle</span>
+                            <span class="text-xs text-surface-400 font-normal">Registra cantidades y fechas de vencimiento de lote</span>
+                        </p>
+                        <div class="grid grid-cols-12 gap-3">
+                            <div class="col-span-12 sm:col-span-6">
+                                <label class="block text-xs text-surface-400 mb-1">Producto *</label>
                                 <select @bind="lineProductoId" class="w-full px-3 py-2 bg-surface-800 border border-surface-700 rounded-lg text-surface-100 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500/50">
-                                    <option value="0">Producto</option>
+                                    <option value="0">-- Seleccionar Producto --</option>
                                     @foreach (var p in productos)
                                     {
-                                        <option value="@p.Id">@p.Nombre</option>
+                                        <option value="@p.Id">@p.Nombre (@p.Categoria.Nombre)</option>
                                     }
                                 </select>
                             </div>
-                            <div class="col-span-2">
+                            <div class="col-span-6 sm:col-span-3">
+                                <label class="block text-xs text-surface-400 mb-1">Cantidad *</label>
                                 <input type="number" @bind="lineCantidad" min="0.01" step="0.01" placeholder="Cant."
                                        class="w-full px-3 py-2 bg-surface-800 border border-surface-700 rounded-lg text-surface-100 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500/50" />
                             </div>
-                            <div class="col-span-3">
+                            <div class="col-span-6 sm:col-span-3">
+                                <label class="block text-xs text-surface-400 mb-1">Costo Unit. (S/) *</label>
                                 <input type="number" @bind="lineCosto" min="0.01" step="0.01" placeholder="Costo unit."
                                        class="w-full px-3 py-2 bg-surface-800 border border-surface-700 rounded-lg text-surface-100 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500/50" />
                             </div>
-                            <div class="col-span-2">
-                                <button @onclick="AddLine" class="w-full py-2 bg-primary-600 hover:bg-primary-500 text-white rounded-lg text-sm font-medium transition-colors">
-                                    Agregar
+                        </div>
+
+                        <div class="grid grid-cols-12 gap-3 items-end pt-1">
+                            <div class="col-span-12 sm:col-span-8">
+                                <label class="block text-xs text-surface-400 mb-1">
+                                    Fecha de Vencimiento de Lote
+                                    <span class="text-surface-500 text-[11px] font-normal">(opcional para productos perecibles)</span>
+                                </label>
+                                <input type="date" @bind="lineFechaVencimiento"
+                                       class="w-full px-3 py-2 bg-surface-800 border border-surface-700 rounded-lg text-surface-100 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500/50" />
+                            </div>
+                            <div class="col-span-12 sm:col-span-4">
+                                <button @onclick="AddLine" class="w-full py-2.5 bg-primary-600 hover:bg-primary-500 text-white rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center justify-center gap-1.5">
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                                    Agregar Ítem
                                 </button>
                             </div>
                         </div>
@@ -100,50 +118,70 @@
                     <!-- Lines table -->
                     @if (detalles.Count > 0)
                     {
-                        <table class="w-full text-sm">
-                            <thead>
-                                <tr class="border-b border-surface-800">
-                                    <th class="text-left py-2 text-surface-400 font-medium">Producto</th>
-                                    <th class="text-right py-2 text-surface-400 font-medium">Cant.</th>
-                                    <th class="text-right py-2 text-surface-400 font-medium">Costo</th>
-                                    <th class="text-right py-2 text-surface-400 font-medium">Subtotal</th>
-                                    <th class="w-8"></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var d in detalles)
-                                {
-                                    <tr class="border-b border-surface-800/50">
-                                        <td class="py-2 text-surface-200">@productos.FirstOrDefault(p => p.Id == d.ProductoId)?.Nombre</td>
-                                        <td class="py-2 text-right text-surface-300 font-mono">@d.Cantidad</td>
-                                        <td class="py-2 text-right text-surface-300 font-mono">S/ @d.CostoUnitario.ToString("N2")</td>
-                                        <td class="py-2 text-right text-surface-200 font-mono font-medium">S/ @d.Subtotal.ToString("N2")</td>
-                                        <td class="py-2">
-                                            <button @onclick="() => detalles.Remove(d)" class="p-1 text-surface-600 hover:text-rose-400">
-                                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
-                                            </button>
-                                        </td>
+                        <div class="border border-surface-800 rounded-xl overflow-hidden">
+                            <table class="w-full text-sm">
+                                <thead>
+                                    <tr class="border-b border-surface-800 bg-surface-800/40">
+                                        <th class="text-left py-2.5 px-3 text-surface-400 font-medium">Producto</th>
+                                        <th class="text-center py-2.5 px-3 text-surface-400 font-medium">Vencimiento</th>
+                                        <th class="text-right py-2.5 px-3 text-surface-400 font-medium">Cant.</th>
+                                        <th class="text-right py-2.5 px-3 text-surface-400 font-medium">Costo</th>
+                                        <th class="text-right py-2.5 px-3 text-surface-400 font-medium">Subtotal</th>
+                                        <th class="w-8"></th>
                                     </tr>
-                                }
-                            </tbody>
-                            <tfoot>
-                                <tr class="border-t border-surface-700">
-                                    <td colspan="3" class="py-3 text-right font-medium text-surface-300">Total:</td>
-                                    <td class="py-3 text-right text-lg font-bold text-surface-50 font-mono">S/ @detalles.Sum(d => d.Subtotal).ToString("N2")</td>
-                                    <td></td>
-                                </tr>
-                            </tfoot>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    @foreach (var d in detalles)
+                                    {
+                                        <tr class="border-b border-surface-800/50">
+                                            <td class="py-2.5 px-3 text-surface-200">
+                                                @productos.FirstOrDefault(p => p.Id == d.ProductoId)?.Nombre
+                                            </td>
+                                            <td class="py-2.5 px-3 text-center">
+                                                @if (d.FechaVencimiento.HasValue)
+                                                {
+                                                    <span class="px-2 py-0.5 text-xs rounded-md bg-amber-500/10 text-amber-400 font-mono">
+                                                        @d.FechaVencimiento.Value.ToString("dd/MM/yyyy")
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-xs text-surface-600">—</span>
+                                                }
+                                            </td>
+                                            <td class="py-2.5 px-3 text-right text-surface-300 font-mono">@d.Cantidad</td>
+                                            <td class="py-2.5 px-3 text-right text-surface-300 font-mono">S/ @d.CostoUnitario.ToString("N2")</td>
+                                            <td class="py-2.5 px-3 text-right text-surface-200 font-mono font-medium">S/ @d.Subtotal.ToString("N2")</td>
+                                            <td class="py-2.5 px-2 text-center">
+                                                <button @onclick="() => detalles.Remove(d)" class="p-1 text-surface-600 hover:text-rose-400 transition-colors" title="Eliminar ítem">
+                                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                                <tfoot>
+                                    <tr class="border-t border-surface-700 bg-surface-800/30">
+                                        <td colspan="4" class="py-3 px-3 text-right font-medium text-surface-300">Total de Compra:</td>
+                                        <td class="py-3 px-3 text-right text-base font-bold text-surface-50 font-mono">S/ @detalles.Sum(d => d.Subtotal).ToString("N2")</td>
+                                        <td></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
                     }
 
                     @if (!string.IsNullOrEmpty(formError))
                     {
-                        <div class="p-2.5 bg-rose-500/10 border border-rose-500/20 rounded-lg text-rose-400 text-xs">@formError</div>
+                        <div class="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-400 text-xs flex items-center gap-2">
+                            <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" /></svg>
+                            <span>@formError</span>
+                        </div>
                     }
                 </div>
-                <div class="p-6 border-t border-surface-800 flex justify-end gap-3">
-                    <button @onclick="() => showForm = false" class="px-4 py-2 text-sm text-surface-400">Cancelar</button>
-                    <button @onclick="SaveCompra" class="px-5 py-2 bg-primary-600 hover:bg-primary-500 text-white rounded-xl text-sm font-medium transition-colors">
+                <div class="p-6 border-t border-surface-800 flex justify-end gap-3 bg-surface-900/50">
+                    <button @onclick="() => showForm = false" class="px-4 py-2 text-sm text-surface-400 hover:text-surface-200 transition-colors">Cancelar</button>
+                    <button @onclick="SaveCompra" class="px-5 py-2.5 bg-primary-600 hover:bg-primary-500 text-white rounded-xl text-sm font-medium transition-colors shadow-lg shadow-primary-600/20">
                         Registrar Compra
                     </button>
                 </div>
@@ -162,6 +200,7 @@
     private int lineProductoId;
     private decimal lineCantidad = 1;
     private decimal lineCosto;
+    private DateTime? lineFechaVencimiento;
     private string? formError;
 
     protected override async Task OnInitializedAsync()
@@ -181,20 +220,28 @@
     {
         detalles = new(); selectedProveedorId = 0; formError = null;
         lineProductoId = 0; lineCantidad = 1; lineCosto = 0;
+        lineFechaVencimiento = null;
         showForm = true;
     }
 
     private void AddLine()
     {
-        if (lineProductoId == 0 || lineCantidad <= 0 || lineCosto <= 0) return;
+        if (lineProductoId == 0 || lineCantidad <= 0 || lineCosto <= 0)
+        {
+            formError = "Seleccione un producto y especifique cantidad y costo válidos.";
+            return;
+        }
+        formError = null;
         detalles.Add(new CompraDetalle
         {
             ProductoId = lineProductoId,
             Cantidad = lineCantidad,
             CostoUnitario = lineCosto,
-            Subtotal = lineCantidad * lineCosto
+            Subtotal = lineCantidad * lineCosto,
+            FechaVencimiento = lineFechaVencimiento
         });
         lineProductoId = 0; lineCantidad = 1; lineCosto = 0;
+        lineFechaVencimiento = null;
     }
 
     private async Task SaveCompra()
@@ -214,3 +261,4 @@
         showForm = false;
     }
 }
+

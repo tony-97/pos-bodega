@@ -58,19 +58,33 @@
                         var p = product;
                         <button @onclick="() => AddToCart(p)"
                                 disabled="@(p.StockActual <= 0)"
-                                class="text-left p-4 bg-surface-900 border border-surface-800 rounded-xl hover:border-primary-500/40 hover:bg-surface-850 transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed group">
-                            <div class="flex items-start justify-between mb-2">
+                                class="text-left p-4 bg-surface-900 border border-surface-800 rounded-xl hover:border-primary-500/40 hover:bg-surface-850 transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed group relative">
+                            <div class="flex items-start justify-between mb-1.5">
                                 <p class="text-sm font-medium text-surface-200 group-hover:text-surface-50 line-clamp-2 leading-tight">@p.Nombre</p>
                                 @if (p.StockActual <= p.StockMinimo && p.StockActual > 0)
                                 {
-                                    <span class="ml-2 w-2 h-2 rounded-full bg-amber-400 flex-shrink-0 mt-1"></span>
+                                    <span class="ml-2 w-2 h-2 rounded-full bg-amber-400 flex-shrink-0 mt-1" title="Stock bajo"></span>
                                 }
                                 else if (p.StockActual <= 0)
                                 {
-                                    <span class="ml-2 w-2 h-2 rounded-full bg-rose-400 flex-shrink-0 mt-1"></span>
+                                    <span class="ml-2 w-2 h-2 rounded-full bg-rose-400 flex-shrink-0 mt-1" title="Agotado"></span>
                                 }
                             </div>
-                            <p class="text-xs text-surface-500 mb-2">@p.Categoria.Nombre</p>
+                            <div class="flex items-center justify-between text-xs mb-2">
+                                <span class="text-surface-500">@p.Categoria.Nombre</span>
+                                @if (p.EstaVencido)
+                                {
+                                    <span class="px-1.5 py-0.5 text-[10px] rounded bg-rose-500/20 text-rose-400 font-semibold border border-rose-500/30">
+                                        Vencido
+                                    </span>
+                                }
+                                else if (p.PorVencer)
+                                {
+                                    <span class="px-1.5 py-0.5 text-[10px] rounded bg-amber-500/20 text-amber-400 font-semibold border border-amber-500/30">
+                                        Vence en @p.DiasParaVencer d
+                                    </span>
+                                }
+                            </div>
                             <div class="flex items-end justify-between">
                                 <p class="text-lg font-bold text-primary-400">S/ @p.PrecioVenta.ToString("N2")</p>
                                 <p class="text-xs text-surface-500">Stock: @p.StockActual</p>
@@ -116,7 +130,17 @@
                     <div class="flex items-center gap-3 p-3 bg-surface-800/50 rounded-lg group">
                         <div class="flex-1 min-w-0">
                             <p class="text-sm font-medium text-surface-200 truncate">@item.Producto.Nombre</p>
-                            <p class="text-xs text-surface-500">S/ @item.PrecioUnitario.ToString("N2") c/u</p>
+                            <div class="flex items-center gap-2">
+                                <p class="text-xs text-surface-500">S/ @item.PrecioUnitario.ToString("N2") c/u</p>
+                                @if (item.Producto.PorVencer)
+                                {
+                                    <span class="text-[10px] text-amber-400 bg-amber-500/10 px-1 rounded">Vence en @item.Producto.DiasParaVencer d</span>
+                                }
+                                else if (item.Producto.EstaVencido)
+                                {
+                                    <span class="text-[10px] text-rose-400 bg-rose-500/10 px-1 rounded">Vencido</span>
+                                }
+                            </div>
                         </div>
                         <div class="flex items-center gap-1.5">
                             <button @onclick="() => DecrementItem(item)"
