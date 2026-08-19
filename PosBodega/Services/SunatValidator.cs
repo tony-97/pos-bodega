@@ -8,7 +8,7 @@ public static class SunatValidator
     private static readonly int[] RucWeights = { 5, 4, 3, 2, 7, 6, 5, 4, 3, 2 };
 
     /// <summary>
-    /// Validates Peruvian DNI (must be exactly 8 digits).
+    /// Validates Peruvian DNI (must be exactly 8 numeric digits).
     /// </summary>
     public static bool EsDniValido(string? dni)
     {
@@ -25,7 +25,7 @@ public static class SunatValidator
         error = string.Empty;
         if (string.IsNullOrWhiteSpace(ruc))
         {
-            error = "El número de RUC es obligatorio para emitir Factura.";
+            error = "El número de RUC no puede estar vacío.";
             return false;
         }
 
@@ -33,7 +33,7 @@ public static class SunatValidator
 
         if (clean.Length == 8)
         {
-            error = "Ha ingresado un DNI (8 dígitos). La Factura exige obligatoriamente un RUC de 11 dígitos.";
+            error = "Ha ingresado un DNI (8 dígitos), no un RUC (11 dígitos).";
             return false;
         }
 
@@ -74,7 +74,8 @@ public static class SunatValidator
     }
 
     /// <summary>
-    /// Validates full document requirements for SUNAT compliance.
+    /// Validates full document requirements for SUNAT compliance under the Nuevo RUS regime.
+    /// Under Nuevo RUS (persona natural RUC 10), businesses only emit Boletas de Venta and internal tickets.
     /// </summary>
     public static bool ValidarComprobante(
         TipoComprobante tipo,
@@ -85,27 +86,7 @@ public static class SunatValidator
     {
         mensajeError = string.Empty;
 
-        if (tipo == TipoComprobante.Factura)
-        {
-            if (string.IsNullOrWhiteSpace(clienteDocumento))
-            {
-                mensajeError = "Para emitir una Factura es obligatorio ingresar el RUC del cliente.";
-                return false;
-            }
-
-            if (!EsRucValido(clienteDocumento, out var rucError))
-            {
-                mensajeError = rucError;
-                return false;
-            }
-
-            if (string.IsNullOrWhiteSpace(clienteNombre) || clienteNombre.Trim().Equals("Clientes Varios", StringComparison.OrdinalIgnoreCase))
-            {
-                mensajeError = "Para emitir una Factura es obligatoria la Razón Social / Nombre de la empresa o cliente.";
-                return false;
-            }
-        }
-        else if (tipo == TipoComprobante.Boleta)
+        if (tipo == TipoComprobante.Boleta)
         {
             if (total > 700)
             {
@@ -116,15 +97,15 @@ public static class SunatValidator
                 }
 
                 var cleanDoc = clienteDocumento.Trim();
-                if (!EsDniValido(cleanDoc) && !EsRucValido(cleanDoc, out _))
+                if (!EsDniValido(cleanDoc) && !EsRucValido(cleanDoc, out var rucErr))
                 {
-                    mensajeError = "El documento del cliente para montos mayores a S/ 700 debe ser un DNI válido (8 dígitos) o RUC (11 dígitos).";
+                    mensajeError = $"El documento del cliente para montos mayores a S/ 700 debe ser un DNI válido (8 dígitos) o RUC (11 dígitos). {rucErr}".Trim();
                     return false;
                 }
 
                 if (string.IsNullOrWhiteSpace(clienteNombre) || clienteNombre.Trim().Equals("Clientes Varios", StringComparison.OrdinalIgnoreCase))
                 {
-                    mensajeError = "Por norma SUNAT, para ventas mayores a S/ 700.00 debe ingresar los Apellidos y Nombres del cliente.";
+                    mensajeError = "Por norma SUNAT, para ventas mayores a S/ 700.00 debe ingresar los Apellidos y Nombres o Razón Social del cliente.";
                     return false;
                 }
             }

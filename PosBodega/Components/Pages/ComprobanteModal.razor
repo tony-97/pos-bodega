@@ -7,8 +7,8 @@
         <!-- Header Actions -->
         <div class="flex items-center justify-between pb-3 border-b border-surface-800">
             <div class="flex items-center gap-2">
-                <div class="w-8 h-8 rounded-lg @(Venta.TipoComprobante == TipoComprobante.Factura ? "bg-purple-500/20 text-purple-400" : Venta.TipoComprobante == TipoComprobante.Boleta ? "bg-primary-500/20 text-primary-400" : "bg-amber-500/20 text-amber-400") flex items-center justify-center font-bold text-sm">
-                    @(Venta.TipoComprobante == TipoComprobante.Factura ? "F" : Venta.TipoComprobante == TipoComprobante.Boleta ? "B" : "T")
+                <div class="w-8 h-8 rounded-lg @(Venta.TipoComprobante == TipoComprobante.Boleta ? "bg-primary-500/20 text-primary-400" : "bg-amber-500/20 text-amber-400") flex items-center justify-center font-bold text-sm">
+                    @(Venta.TipoComprobante == TipoComprobante.Boleta ? "B" : "T")
                 </div>
                 <div>
                     <h3 class="text-base font-bold text-surface-100">
@@ -68,7 +68,7 @@
             else if (Venta.ComprobanteDestinoId.HasValue)
             {
                 <div class="my-2 p-1.5 bg-blue-100 border border-blue-400 text-blue-800 text-center font-bold text-[10px] uppercase rounded">
-                    ✓ TICKET CONVERTIDO A COMPROBANTE OFICIAL
+                    ✓ TICKET CONVERTIDO A BOLETA OFICIAL
                 </div>
             }
             else if (Venta.TicketOrigenId.HasValue)
@@ -196,9 +196,7 @@
                             @(GenerateFiscalHash(Venta))
                         </p>
                         <p class="text-[8px] text-gray-500">
-                            @(Venta.TipoComprobante == TipoComprobante.Factura 
-                                ? "Representación impresa de la FACTURA ELECTRÓNICA" 
-                                : Venta.TipoComprobante == TipoComprobante.Boleta 
+                            @(Venta.TipoComprobante == TipoComprobante.Boleta 
                                 ? "Representación impresa de la BOLETA DE VENTA ELECTRÓNICA" 
                                 : "DOCUMENTO DE CONTROL INTERNO")
                         </p>
@@ -219,68 +217,31 @@
                 <div class="flex items-center justify-between">
                     <h4 class="text-sm font-bold text-primary-300 flex items-center gap-2">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>
-                        Convertir Ticket a Comprobante Oficial
+                        Convertir Ticket a Boleta Oficial (B001)
                     </h4>
                     <button @onclick="() => showConversionForm = false" class="text-xs text-surface-400 hover:text-surface-200">Cancelar</button>
                 </div>
 
-                <div class="grid grid-cols-2 gap-2">
-                    <button type="button" @onclick="() => conversionTargetTipo = TipoComprobante.Boleta"
-                            class="p-2.5 rounded-lg border text-xs font-semibold transition-all @(conversionTargetTipo == TipoComprobante.Boleta ? "bg-primary-600 text-white border-primary-500 shadow-md shadow-primary-500/20" : "bg-surface-800 text-surface-300 border-surface-700 hover:bg-surface-750")">
-                        📄 Boleta de Venta (B001)
-                    </button>
-                    <button type="button" @onclick="() => conversionTargetTipo = TipoComprobante.Factura"
-                            class="p-2.5 rounded-lg border text-xs font-semibold transition-all @(conversionTargetTipo == TipoComprobante.Factura ? "bg-purple-600 text-white border-purple-500 shadow-md shadow-purple-500/20" : "bg-surface-800 text-surface-300 border-surface-700 hover:bg-surface-750")">
-                        🏢 Factura con RUC (F001)
-                    </button>
+                <div class="p-2 bg-primary-500/10 border border-primary-500/20 rounded-lg text-[11px] text-primary-300">
+                    ℹ En el <strong>Nuevo RUS</strong>, los tickets se convierten exclusivamente a <strong>Boletas de Venta Electrónicas</strong>.
                 </div>
 
-                @if (conversionTargetTipo == TipoComprobante.Factura)
-                {
-                    <div class="space-y-2 pt-1">
-                        <div>
-                            <label class="block text-[11px] font-medium text-surface-300 mb-1">
-                                RUC de la Empresa / Cliente <span class="text-rose-400">* (11 dígitos)</span>
-                            </label>
-                            <input type="text" @bind="conversionDoc" maxlength="11"
-                                   placeholder="Ej: 20123456789 o 10456789123"
-                                   class="w-full px-3 py-2 bg-surface-900 border border-surface-700 rounded-lg text-surface-100 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-purple-500" />
-                        </div>
-                        <div>
-                            <label class="block text-[11px] font-medium text-surface-300 mb-1">
-                                Razón Social <span class="text-rose-400">*</span>
-                            </label>
-                            <input type="text" @bind="conversionNombre"
-                                   placeholder="Nombre o Razón Social oficial"
-                                   class="w-full px-3 py-2 bg-surface-900 border border-surface-700 rounded-lg text-surface-100 text-xs focus:outline-none focus:ring-1 focus:ring-purple-500" />
-                        </div>
-                        <div>
-                            <label class="block text-[11px] font-medium text-surface-300 mb-1">Dirección Fiscal (Opcional)</label>
-                            <input type="text" @bind="conversionDireccion"
-                                   placeholder="Dirección fiscal del cliente"
-                                   class="w-full px-3 py-2 bg-surface-900 border border-surface-700 rounded-lg text-surface-100 text-xs focus:outline-none focus:ring-1 focus:ring-purple-500" />
-                        </div>
+                <div class="space-y-2 pt-1">
+                    <div>
+                        <label class="block text-[11px] font-medium text-surface-300 mb-1">
+                            DNI o RUC del Cliente @(Venta.Total > 700 ? "(Obligatorio > S/ 700)" : "(Opcional)")
+                        </label>
+                        <input type="text" @bind="conversionDoc" maxlength="11"
+                               placeholder="8 dígitos para DNI u 11 para RUC"
+                               class="w-full px-3 py-2 bg-surface-900 border border-surface-700 rounded-lg text-surface-100 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-primary-500" />
                     </div>
-                }
-                else
-                {
-                    <div class="space-y-2 pt-1">
-                        <div>
-                            <label class="block text-[11px] font-medium text-surface-300 mb-1">
-                                DNI o RUC del Cliente @(Venta.Total > 700 ? "(Obligatorio > S/ 700)" : "(Opcional)")
-                            </label>
-                            <input type="text" @bind="conversionDoc" maxlength="11"
-                                   placeholder="8 dígitos para DNI u 11 para RUC"
-                                   class="w-full px-3 py-2 bg-surface-900 border border-surface-700 rounded-lg text-surface-100 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-primary-500" />
-                        </div>
-                        <div>
-                            <label class="block text-[11px] font-medium text-surface-300 mb-1">Nombres del Cliente</label>
-                            <input type="text" @bind="conversionNombre"
-                                   placeholder="Clientes Varios o Nombre del cliente"
-                                   class="w-full px-3 py-2 bg-surface-900 border border-surface-700 rounded-lg text-surface-100 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500" />
-                        </div>
+                    <div>
+                        <label class="block text-[11px] font-medium text-surface-300 mb-1">Nombres / Razón Social del Cliente</label>
+                        <input type="text" @bind="conversionNombre"
+                               placeholder="Clientes Varios o Nombre del cliente"
+                               class="w-full px-3 py-2 bg-surface-900 border border-surface-700 rounded-lg text-surface-100 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500" />
                     </div>
-                }
+                </div>
 
                 @if (!string.IsNullOrEmpty(conversionError))
                 {
@@ -292,11 +253,11 @@
                     @if (isConverting)
                     {
                         <div class="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                        <span>Generando Comprobante...</span>
+                        <span>Generando Boleta B001...</span>
                     }
                     else
                     {
-                        <span>Confirmar y Emitir @(conversionTargetTipo == TipoComprobante.Factura ? "Factura F001" : "Boleta B001")</span>
+                        <span>Confirmar y Emitir Boleta de Venta (B001)</span>
                     }
                 </button>
             </div>
@@ -368,9 +329,9 @@
                 @if (Venta.TipoComprobante == TipoComprobante.TicketInterno && Venta.Estado == EstadoVenta.Emitida && !Venta.ComprobanteDestinoId.HasValue && !showConversionForm)
                 {
                     <button @onclick="() => { showConversionForm = true; showAnulacionForm = false; }"
-                            class="px-3 py-2 bg-purple-600/20 text-purple-300 hover:bg-purple-600/30 border border-purple-500/30 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5">
+                            class="px-3 py-2 bg-primary-600/20 text-primary-300 hover:bg-primary-600/30 border border-primary-500/30 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>
-                        Convertir Ticket
+                        Convertir a Boleta
                     </button>
                 }
 
@@ -408,10 +369,8 @@
     private ConfiguracionEmpresa empresa = new();
     private bool showConversionForm;
     private bool showAnulacionForm;
-    private TipoComprobante conversionTargetTipo = TipoComprobante.Boleta;
     private string conversionNombre = "";
     private string conversionDoc = "";
-    private string conversionDireccion = "";
     private string? conversionError;
     private bool isConverting;
 
@@ -427,12 +386,10 @@
         empresa = EmpresaSvc.GetConfiguracion();
         conversionNombre = Venta.ClienteNombre == "Clientes Varios" ? "" : Venta.ClienteNombre;
         conversionDoc = Venta.ClienteDocumento ?? "";
-        conversionDireccion = Venta.ClienteDireccion ?? "";
     }
 
     private string GetDocumentTitle(TipoComprobante tipo) => tipo switch
     {
-        TipoComprobante.Factura => "FACTURA ELECTRÓNICA",
         TipoComprobante.Boleta => "BOLETA DE VENTA ELECTRÓNICA",
         _ => "TICKET DE VENTA INTERNO"
     };
@@ -506,10 +463,9 @@
 
         var (nuevoComprobante, error) = await VentaSvc.ConvertirTicketAComprobanteAsync(
             Venta.Id,
-            conversionTargetTipo,
+            TipoComprobante.Boleta,
             conversionNombre,
-            conversionDoc,
-            conversionDireccion);
+            conversionDoc);
 
         if (error != null)
         {

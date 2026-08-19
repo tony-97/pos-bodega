@@ -49,17 +49,14 @@ public class VentaService
     }
 
     /// <summary>
-    /// Gets the next correlative series and number for a given document type.
+    /// Gets the next correlative series and number for a given document type (Boleta or Ticket under Nuevo RUS).
     /// </summary>
     public async Task<(string Serie, int Numero, string NumeroComprobante)> GetNextCorrelativoAsync(TipoComprobante tipo)
     {
         var config = _empresaService.GetConfiguracion();
-        string serie = tipo switch
-        {
-            TipoComprobante.Boleta => config.SerieBoleta,
-            TipoComprobante.Factura => config.SerieFactura,
-            _ => config.SerieTicket
-        };
+        string serie = tipo == TipoComprobante.Boleta
+            ? config.SerieBoleta
+            : config.SerieTicket;
 
         var lastNumber = await _db.Ventas
             .Where(v => v.Serie == serie)
@@ -72,7 +69,7 @@ public class VentaService
 
     /// <summary>
     /// Registers a sale, calculates SUNAT tax breakdown, atomically decrements stock, and assigns independent sequential correlative.
-    /// Returns (venta, null) on success, or (null, errorMessage) on failure.
+    /// Under Nuevo RUS, emissions are Boletas de Venta (B001) or internal control Tickets (T001).
     /// </summary>
     public async Task<(Venta? Venta, string? Error)> RegistrarVentaAsync(Venta venta, List<VentaDetalle> detalles)
     {
@@ -97,7 +94,7 @@ public class VentaService
                 total += detalle.Subtotal;
             }
 
-            // SUNAT validation
+            // SUNAT validation (Nuevo RUS rules)
             if (!SunatValidator.ValidarComprobante(
                 venta.TipoComprobante,
                 total,
@@ -134,6 +131,8 @@ public class VentaService
                     venta.ClienteTipoDocumento = TipoDocumentoIdentidad.DNI;
                 else if (cleanDoc.Length == 11)
                     venta.ClienteTipoDocumento = TipoDocumentoIdentidad.RUC;
+                else
+                    venta.ClienteTipoDocumento = TipoDocumentoIdentidad.SinDocumento;
             }
             else
             {
@@ -182,7 +181,7 @@ public class VentaService
     }
 
     /// <summary>
-    /// Converts an existing internal ticket into an official Boleta or Factura.
+    /// Converts an existing internal ticket into an official Boleta de Venta (B001) under Nuevo RUS.
     /// Does not decrement stock a second time because stock was already reserved upon ticket creation.
     /// </summary>
     public async Task<(Venta? Comprobante, string? Error)> ConvertirTicketAComprobanteAsync(
@@ -206,20 +205,20 @@ public class VentaService
                 return (null, "Ticket no encontrado.");
 
             if (ticket.TipoComprobante != TipoComprobante.TicketInterno)
-                return (null, "Solo los Tickets de Venta Internos pueden ser convertidos a Boleta o Factura.");
+                return (null, "Solo los Tickets de Venta Internos pueden ser convertidos a Boleta de Venta.");
 
             if (ticket.Estado == EstadoVenta.Anulada)
                 return (null, "No se puede convertir un ticket anulado.");
 
             if (ticket.ComprobanteDestinoId.HasValue)
-                return (null, "Este ticket ya ha sido convertido previamente.");
+                return (null, "Este ticket ya ha sido convertido previamente a un comprobante oficial.");
 
-            if (nuevoTipo == TipoComprobante.TicketInterno)
-                return (null, "Debe seleccionar Boleta o Factura como comprobante de destino.");
+            // Under Nuevo RUS, conversion target is Boleta de Venta
+            var tipoDestino = TipoComprobante.Boleta;
 
-            // Validate SUNAT compliance for the new document
+            // Validate SUNAT compliance for the new Boleta
             if (!SunatValidator.ValidarComprobante(
-                nuevoTipo,
+                tipoDestino,
                 ticket.Total,
                 clienteNombre,
                 clienteDocumento,
@@ -228,7 +227,7 @@ public class VentaService
                 return (null, validationError);
             }
 
-            var correlativo = await GetNextCorrelativoAsync(nuevoTipo);
+            var correlativo = await GetNextCorrelativoAsync(tipoDestino);
 
             var nuevaVenta = new Venta
             {
@@ -236,7 +235,7 @@ public class VentaService
                 Serie = correlativo.Serie,
                 Numero = correlativo.Numero,
                 NumeroComprobante = correlativo.NumeroComprobante,
-                TipoComprobante = nuevoTipo,
+                TipoComprobante = tipoDestino,
                 Estado = EstadoVenta.Emitida,
                 ClienteId = ticket.ClienteId,
                 ClienteNombre = string.IsNullOrWhiteSpace(clienteNombre) ? "Clientes Varios" : clienteNombre.Trim(),
@@ -320,7 +319,7 @@ public class VentaService
                 return "El comprobante ya se encuentra anulado.";
 
             if (venta.ComprobanteDestinoId.HasValue)
-                return "No se puede anular este ticket porque ya fue convertido a un comprobante oficial. Anule el comprobante final directamente.";
+                return "No se puede anular este ticket porque ya fue convertido a una Boleta oficial. Anule la Boleta final directamente.";
 
             venta.Estado = EstadoVenta.Anulada;
             venta.MotivoAnulacion = string.IsNullOrWhiteSpace(motivo) ? "Anulado a solicitud del cliente / devolución" : motivo.Trim();

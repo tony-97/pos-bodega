@@ -100,7 +100,7 @@
                                     <tr class="border-b border-surface-800/50 hover:bg-surface-850/50 transition-colors">
                                         <td class="py-2.5 font-mono font-bold text-surface-200">
                                             <span class="px-1.5 py-0.5 rounded text-[10px] mr-1 @GetTipoBadge(v.TipoComprobante)">
-                                                @(v.TipoComprobante == TipoComprobante.Factura ? "FAC" : v.TipoComprobante == TipoComprobante.Boleta ? "BOL" : "TCK")
+                                                @(v.TipoComprobante == TipoComprobante.Boleta ? "BOL" : "TCK")
                                             </span>
                                             @v.NumeroComprobante
                                         </td>
@@ -169,7 +169,6 @@
     private string GetTipoBadge(TipoComprobante t) => t switch
     {
         TipoComprobante.Boleta => "bg-primary-500/20 text-primary-400",
-        TipoComprobante.Factura => "bg-purple-500/20 text-purple-400",
         _ => "bg-amber-500/20 text-amber-400"
     };
 

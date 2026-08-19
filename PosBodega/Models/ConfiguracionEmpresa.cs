@@ -7,7 +7,7 @@ public class ConfiguracionEmpresa
     public int Id { get; set; } = 1;
 
     [Required, MaxLength(11)]
-    public string Ruc { get; set; } = "10456789123";
+    public string Ruc { get; set; } = "10456789124";
 
     [Required, MaxLength(200)]
     public string RazonSocial { get; set; } = "BODEGA SAN JUAN";
@@ -29,9 +29,6 @@ public class ConfiguracionEmpresa
 
     [MaxLength(10)]
     public string SerieBoleta { get; set; } = "B001";
-
-    [MaxLength(10)]
-    public string SerieFactura { get; set; } = "F001";
 
     [MaxLength(10)]
     public string SerieTicket { get; set; } = "T001";

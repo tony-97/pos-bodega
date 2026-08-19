@@ -7,7 +7,7 @@ public class EmpresaService
     private ConfiguracionEmpresa _config = new()
     {
         Id = 1,
-        Ruc = "10456789123",
+        Ruc = "10456789124",
         RazonSocial = "BODEGA SAN JUAN",
         NombreComercial = "Bodega San Juan - Abarrotes y Bebidas",
         Titular = "Juan Carlos Mendoza Pérez",
@@ -15,7 +15,6 @@ public class EmpresaService
         Telefono = "(062) 512345 / 962123456",
         RegimenTributario = "Nuevo Régimen Único Simplificado (Nuevo RUS)",
         SerieBoleta = "B001",
-        SerieFactura = "F001",
         SerieTicket = "T001",
         MensajePie = "¡Gracias por su compra! Vuelva pronto."
     };

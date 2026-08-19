@@ -10,7 +10,7 @@
         <div>
             <h1 class="text-2xl font-bold text-surface-50">Historial de Comprobantes</h1>
             <p class="text-surface-400 text-sm mt-1">
-                Boletas de Venta (B001), Facturas (F001) y Tickets Internos (T001)
+                Boletas de Venta (B001) y Tickets Internos (T001) — Régimen Nuevo RUS
             </p>
         </div>
         <div class="flex items-center gap-3">
@@ -23,47 +23,37 @@
     </div>
 
     <!-- Summary Metrics -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <!-- Total Emitido -->
         <div class="bg-surface-900 border border-surface-800 rounded-xl p-4">
             <div class="flex items-center justify-between mb-2">
-                <span class="text-xs text-surface-400 font-medium">Total Facturado</span>
+                <span class="text-xs text-surface-400 font-medium">Total Ventas Emitidas</span>
                 <span class="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400">
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
                 </span>
             </div>
-            <p class="text-xl font-bold text-surface-50">S/ @TotalFacturado.ToString("N2")</p>
-            <p class="text-xs text-surface-500 mt-0.5">@ventas.Count(v => v.Estado == EstadoVenta.Emitida) comprobantes activos</p>
+            <p class="text-xl font-bold text-surface-50">S/ @TotalVentasEmitidas.ToString("N2")</p>
+            <p class="text-xs text-surface-500 mt-0.5">@ventas.Count(v => v.Estado == EstadoVenta.Emitida) ventas activas</p>
         </div>
 
         <!-- Boletas -->
         <div class="bg-surface-900 border border-surface-800 rounded-xl p-4">
             <div class="flex items-center justify-between mb-2">
-                <span class="text-xs text-primary-400 font-medium">Boletas (B001)</span>
+                <span class="text-xs text-primary-400 font-medium">Boletas de Venta (B001)</span>
                 <span class="p-1.5 rounded-lg bg-primary-500/10 text-primary-400 font-bold text-xs">B001</span>
             </div>
             <p class="text-xl font-bold text-surface-50">S/ @TotalBoletas.ToString("N2")</p>
             <p class="text-xs text-surface-500 mt-0.5">@CountBoletas boletas emitidas</p>
         </div>
 
-        <!-- Facturas -->
-        <div class="bg-surface-900 border border-surface-800 rounded-xl p-4">
-            <div class="flex items-center justify-between mb-2">
-                <span class="text-xs text-purple-400 font-medium">Facturas (F001)</span>
-                <span class="p-1.5 rounded-lg bg-purple-500/10 text-purple-400 font-bold text-xs">F001</span>
-            </div>
-            <p class="text-xl font-bold text-surface-50">S/ @TotalFacturas.ToString("N2")</p>
-            <p class="text-xs text-surface-500 mt-0.5">@CountFacturas facturas emitidas</p>
-        </div>
-
         <!-- Tickets Pendientes -->
         <div class="bg-surface-900 border border-surface-800 rounded-xl p-4">
             <div class="flex items-center justify-between mb-2">
-                <span class="text-xs text-amber-400 font-medium">Tickets Pendientes</span>
+                <span class="text-xs text-amber-400 font-medium">Tickets Pendientes de Boleta</span>
                 <span class="p-1.5 rounded-lg bg-amber-500/10 text-amber-400 font-bold text-xs">T001</span>
             </div>
             <p class="text-xl font-bold text-surface-50">@CountTicketsPendientes</p>
-            <p class="text-xs text-surface-500 mt-0.5">tickets por convertir</p>
+            <p class="text-xs text-surface-500 mt-0.5">tickets por convertir a boleta</p>
         </div>
     </div>
 
@@ -89,7 +79,6 @@
                 <select @bind="filtroTipo" class="w-full px-3 py-2 bg-surface-800 border border-surface-700 rounded-lg text-surface-100 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500">
                     <option value="">Todos los tipos</option>
                     <option value="Boleta">Boleta (B001)</option>
-                    <option value="Factura">Factura (F001)</option>
                     <option value="TicketInterno">Ticket Interno (T001)</option>
                 </select>
             </div>
@@ -101,7 +90,7 @@
                     <option value="">Todos los estados</option>
                     <option value="Emitida">Emitida</option>
                     <option value="Anulada">Anulada</option>
-                    <option value="Convertido">Ticket Convertido</option>
+                    <option value="Convertido">Ticket Convertido a Boleta</option>
                     <option value="Pendiente">Ticket Pendiente</option>
                 </select>
             </div>
@@ -152,7 +141,7 @@
                                 <td class="py-3 px-4 font-mono font-bold">
                                     <div class="flex items-center gap-2">
                                         <span class="px-2 py-0.5 rounded text-[10px] font-semibold @GetTipoBadge(v.TipoComprobante)">
-                                            @(v.TipoComprobante == TipoComprobante.Factura ? "FAC" : v.TipoComprobante == TipoComprobante.Boleta ? "BOL" : "TCK")
+                                            @(v.TipoComprobante == TipoComprobante.Boleta ? "BOL" : "TCK")
                                         </span>
                                         <span class="text-surface-100">@v.NumeroComprobante</span>
                                     </div>
@@ -207,7 +196,7 @@
                                     }
                                     else if (v.ComprobanteDestinoId.HasValue)
                                     {
-                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-500/20 text-blue-400 border border-blue-500/30" title="Convertido a comprobante oficial">
+                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-500/20 text-blue-400 border border-blue-500/30" title="Convertido a Boleta oficial">
                                             Convertido
                                         </span>
                                     }
@@ -251,11 +240,9 @@
     private string filtroTipo = "";
     private string filtroEstado = "";
 
-    private decimal TotalFacturado => ventas.Where(v => v.Estado == EstadoVenta.Emitida).Sum(v => v.Total);
+    private decimal TotalVentasEmitidas => ventas.Where(v => v.Estado == EstadoVenta.Emitida).Sum(v => v.Total);
     private decimal TotalBoletas => ventas.Where(v => v.Estado == EstadoVenta.Emitida && v.TipoComprobante == TipoComprobante.Boleta).Sum(v => v.Total);
-    private decimal TotalFacturas => ventas.Where(v => v.Estado == EstadoVenta.Emitida && v.TipoComprobante == TipoComprobante.Factura).Sum(v => v.Total);
     private int CountBoletas => ventas.Count(v => v.TipoComprobante == TipoComprobante.Boleta && v.Estado == EstadoVenta.Emitida);
-    private int CountFacturas => ventas.Count(v => v.TipoComprobante == TipoComprobante.Factura && v.Estado == EstadoVenta.Emitida);
     private int CountTicketsPendientes => ventas.Count(v => v.TipoComprobante == TipoComprobante.TicketInterno && v.Estado == EstadoVenta.Emitida && !v.ComprobanteDestinoId.HasValue);
 
     private List<Venta> FilteredVentas => ventas.Where(v =>
@@ -296,7 +283,6 @@
     private string GetTipoBadge(TipoComprobante t) => t switch
     {
         TipoComprobante.Boleta => "bg-primary-500/20 text-primary-400 border border-primary-500/30",
-        TipoComprobante.Factura => "bg-purple-500/20 text-purple-400 border border-purple-500/30",
         _ => "bg-amber-500/20 text-amber-400 border border-amber-500/30"
     };
 

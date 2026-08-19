@@ -159,42 +159,22 @@ public static class DbInitializer
             db.SaveChanges();
         }
 
-        // 6. Backfill any existing sales with empty NumeroComprobante
-        var legacySales = db.Ventas.Where(v => string.IsNullOrEmpty(v.NumeroComprobante)).ToList();
-        if (legacySales.Any())
+        // 6. Safe non-destructive Raw SQL backfill for any legacy sales with null/empty fields
+        try
         {
-            int boletaSeq = 1;
-            int ticketSeq = 1;
-            foreach (var v in legacySales.OrderBy(v => v.Fecha))
-            {
-                if (v.TipoComprobante == TipoComprobante.Boleta)
-                {
-                    v.Serie = "B001";
-                    v.Numero = boletaSeq++;
-                    v.NumeroComprobante = $"{v.Serie}-{v.Numero:D6}";
-                }
-                else if (v.TipoComprobante == TipoComprobante.Factura)
-                {
-                    v.Serie = "F001";
-                    v.Numero = 1;
-                    v.NumeroComprobante = $"{v.Serie}-{v.Numero:D6}";
-                }
-                else
-                {
-                    v.Serie = "T001";
-                    v.Numero = ticketSeq++;
-                    v.NumeroComprobante = $"{v.Serie}-{v.Numero:D6}";
-                }
-
-                if (string.IsNullOrEmpty(v.ClienteNombre))
-                {
-                    v.ClienteNombre = "Clientes Varios";
-                }
-
-                v.Subtotal = Math.Round(v.Total / 1.18m, 2);
-                v.Igv = v.Total - v.Subtotal;
-            }
-            db.SaveChanges();
+            db.Database.ExecuteSqlRaw(@"
+                UPDATE Ventas 
+                SET Serie = COALESCE(Serie, 'B001'),
+                    Numero = CASE WHEN Numero = 0 OR Numero IS NULL THEN Id ELSE Numero END,
+                    NumeroComprobante = COALESCE(NumeroComprobante, 'B001-' || printf('%06d', Id)),
+                    ClienteNombre = COALESCE(ClienteNombre, 'Clientes Varios'),
+                    Subtotal = CASE WHEN Subtotal IS NULL OR Subtotal = '0' THEN ROUND(CAST(Total AS REAL) / 1.18, 2) ELSE Subtotal END,
+                    Igv = CASE WHEN Igv IS NULL OR Igv = '0' THEN ROUND(CAST(Total AS REAL) - (CAST(Total AS REAL) / 1.18), 2) ELSE Igv END,
+                    Estado = COALESCE(Estado, 0),
+                    ClienteTipoDocumento = COALESCE(ClienteTipoDocumento, 0)
+                WHERE Serie IS NULL OR NumeroComprobante IS NULL OR ClienteNombre IS NULL OR Subtotal IS NULL OR Subtotal = '0';
+            ");
         }
+        catch { /* Ignore */ }
     }
 }

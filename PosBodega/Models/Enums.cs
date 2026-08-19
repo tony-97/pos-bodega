@@ -16,7 +16,6 @@ public enum MetodoPago
 public enum TipoComprobante
 {
     Boleta,
-    Factura,
     TicketInterno
 }
 
