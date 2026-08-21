@@ -4,133 +4,355 @@
 @inject NavigationManager Nav
 
 <div class="space-y-6">
-    <div>
-        <h1 class="text-2xl font-bold text-surface-50">Reportes</h1>
-        <p class="text-surface-400 text-sm mt-1">Análisis de ventas y rendimiento del negocio</p>
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-surface-50">Reportes & Analítica</h1>
+            <p class="text-surface-400 text-sm mt-1">Análisis de ventas, rendimiento del negocio y auditoría de devoluciones</p>
+        </div>
+
+        <!-- Tab Switcher -->
+        <div class="flex items-center bg-surface-900 p-1 rounded-xl border border-surface-800 self-start sm:self-auto">
+            <button type="button" @onclick='() => activeTab = "ventas"'
+                    class="flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all @(activeTab == "ventas" ? "bg-primary-600 text-white shadow-md shadow-primary-600/20" : "text-surface-400 hover:text-surface-200")">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
+                </svg>
+                <span>Ventas & Ganancias</span>
+            </button>
+            <button type="button" @onclick='() => activeTab = "devoluciones"'
+                    class="flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all @(activeTab == "devoluciones" ? "bg-rose-600 text-white shadow-md shadow-rose-600/20" : "text-surface-400 hover:text-surface-200")">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                </svg>
+                <span>Historial de Devoluciones (@resumenDevoluciones.TotalDevoluciones)</span>
+            </button>
+        </div>
     </div>
 
-    <!-- Date range selector -->
-    <div class="flex items-end gap-4 bg-surface-900 border border-surface-800 rounded-xl p-4">
-        <div>
-            <label class="block text-xs text-surface-500 mb-1">Desde</label>
-            <input type="date" @bind="fechaDesde" class="px-3 py-2 bg-surface-800 border border-surface-700 rounded-lg text-surface-100 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500" />
+    <!-- Date range selector & Presets -->
+    <div class="bg-surface-900 border border-surface-800 rounded-xl p-4 space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="flex flex-wrap items-end gap-3">
+                <div>
+                    <label class="block text-xs text-surface-400 mb-1">Desde</label>
+                    <input type="date" @bind="fechaDesde" class="px-3 py-1.5 bg-surface-800 border border-surface-700 rounded-lg text-surface-100 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                </div>
+                <div>
+                    <label class="block text-xs text-surface-400 mb-1">Hasta</label>
+                    <input type="date" @bind="fechaHasta" class="px-3 py-1.5 bg-surface-800 border border-surface-700 rounded-lg text-surface-100 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                </div>
+                <button @onclick="LoadReports" class="px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-md shadow-primary-600/20">
+                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
+                    <span>Consultar Rango</span>
+                </button>
+            </div>
+
+            <!-- Quick Date Presets -->
+            <div class="flex items-center gap-1.5">
+                <button @onclick="SetDatePresetToday" class="px-2.5 py-1 bg-surface-800 hover:bg-surface-700 text-surface-300 rounded-lg text-[11px] font-medium transition-colors">Hoy</button>
+                <button @onclick="SetDatePresetLast7Days" class="px-2.5 py-1 bg-surface-800 hover:bg-surface-700 text-surface-300 rounded-lg text-[11px] font-medium transition-colors">Últimos 7 días</button>
+                <button @onclick="SetDatePresetThisMonth" class="px-2.5 py-1 bg-surface-800 hover:bg-surface-700 text-surface-300 rounded-lg text-[11px] font-medium transition-colors">Este Mes</button>
+                <button @onclick="SetDatePresetLast30Days" class="px-2.5 py-1 bg-surface-800 hover:bg-surface-700 text-surface-300 rounded-lg text-[11px] font-medium transition-colors">Últimos 30 días</button>
+            </div>
         </div>
-        <div>
-            <label class="block text-xs text-surface-500 mb-1">Hasta</label>
-            <input type="date" @bind="fechaHasta" class="px-3 py-2 bg-surface-800 border border-surface-700 rounded-lg text-surface-100 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500" />
-        </div>
-        <button @onclick="LoadReports" class="px-5 py-2 bg-primary-600 hover:bg-primary-500 text-white rounded-lg text-sm font-medium transition-colors">
-            Generar Reportes
-        </button>
     </div>
 
     @if (loaded)
     {
-        <!-- Summary cards -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div class="bg-surface-900 border border-surface-800 rounded-xl p-5">
-                <p class="text-sm text-surface-400 mb-1">Total Ventas</p>
-                <p class="text-2xl font-bold text-surface-50">@ventas.Count</p>
-                <p class="text-sm text-surface-500 mt-1">transacciones</p>
-            </div>
-            <div class="bg-surface-900 border border-surface-800 rounded-xl p-5">
-                <p class="text-sm text-surface-400 mb-1">Ingresos</p>
-                <p class="text-2xl font-bold text-emerald-400">S/ @ganancia.Ingresos.ToString("N2")</p>
-                <p class="text-sm text-surface-500 mt-1">ventas brutas</p>
-            </div>
-            <div class="bg-surface-900 border border-surface-800 rounded-xl p-5">
-                <p class="text-sm text-surface-400 mb-1">Ganancia Bruta</p>
-                <p class="text-2xl font-bold @(ganancia.Ganancia >= 0 ? "text-emerald-400" : "text-rose-400")">S/ @ganancia.Ganancia.ToString("N2")</p>
-                <p class="text-sm text-surface-500 mt-1">ingresos - costos</p>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <!-- Top products -->
-            <div class="bg-surface-900 border border-surface-800 rounded-xl p-6">
-                <h2 class="text-lg font-semibold text-surface-100 mb-4">Productos Más Vendidos</h2>
-                @if (topProductos.Count > 0)
-                {
-                    <div class="space-y-3">
-                        @for (int i = 0; i < topProductos.Count; i++)
-                        {
-                            var p = topProductos[i];
-                            var maxQty = topProductos.First().CantidadVendida;
-                            var barWidth = maxQty > 0 ? (double)(p.CantidadVendida / maxQty * 100) : 0;
-                            <div>
-                                <div class="flex items-center justify-between mb-1">
-                                    <span class="text-sm text-surface-200">
-                                        <span class="text-surface-500 mr-2">#@(i + 1)</span> @p.ProductoNombre
-                                    </span>
-                                    <span class="text-sm font-mono text-surface-400">@p.CantidadVendida unid. — S/ @p.TotalVendido.ToString("N2")</span>
-                                </div>
-                                <div class="w-full bg-surface-800 rounded-full h-2">
-                                    <div class="h-2 rounded-full bg-gradient-to-r from-primary-600 to-primary-400" style="width: @barWidth%"></div>
-                                </div>
-                            </div>
-                        }
+        @if (activeTab == "ventas")
+        {
+            <!-- Summary cards (Ventas & Rendimiento) -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-surface-900 border border-surface-800 rounded-xl p-5 hover:border-surface-700 transition-colors">
+                    <p class="text-xs text-surface-400 mb-1">Ventas Activas</p>
+                    <p class="text-2xl font-bold text-surface-50">@ventasActivas.Count</p>
+                    <p class="text-[11px] text-surface-500 mt-1">comprobantes válidos</p>
+                </div>
+                <div class="bg-surface-900 border border-surface-800 rounded-xl p-5 hover:border-surface-700 transition-colors">
+                    <p class="text-xs text-surface-400 mb-1">Ingresos Netos</p>
+                    <p class="text-2xl font-bold text-emerald-400">S/ @ganancia.Ingresos.ToString("N2")</p>
+                    <p class="text-[11px] text-surface-500 mt-1">excluye anulaciones</p>
+                </div>
+                <div class="bg-surface-900 border border-surface-800 rounded-xl p-5 hover:border-surface-700 transition-colors">
+                    <p class="text-xs text-surface-400 mb-1">Ganancia Bruta</p>
+                    <p class="text-2xl font-bold @(ganancia.Ganancia >= 0 ? "text-emerald-400" : "text-rose-400")">S/ @ganancia.Ganancia.ToString("N2")</p>
+                    <p class="text-[11px] text-surface-500 mt-1">margen comercial neto</p>
+                </div>
+                <div class="bg-surface-900 border border-surface-800 rounded-xl p-5 hover:border-surface-700 transition-colors cursor-pointer"
+                     @onclick='() => activeTab = "devoluciones"'>
+                    <div class="flex items-center justify-between mb-1">
+                        <p class="text-xs text-rose-400 font-medium">Devoluciones / Anuladas</p>
+                        <span class="px-1.5 py-0.2 bg-rose-500/10 text-rose-400 rounded text-[10px]">Stock devuelto</span>
                     </div>
-                }
-                else
-                {
-                    <p class="text-center py-6 text-surface-500 text-sm">No hay datos para el periodo seleccionado</p>
-                }
+                    <p class="text-2xl font-bold text-rose-400">@resumenDevoluciones.TotalDevoluciones</p>
+                    <p class="text-[11px] text-surface-400 mt-1">S/ @resumenDevoluciones.MontoTotalDevuelto.ToString("N2") devuelto →</p>
+                </div>
             </div>
 
-            <!-- Sales list -->
-            <div class="bg-surface-900 border border-surface-800 rounded-xl p-6">
-                <h2 class="text-lg font-semibold text-surface-100 mb-4">Detalle de Ventas & Comprobantes</h2>
-                <div class="max-h-96 overflow-y-auto">
-                    @if (ventas.Count > 0)
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Top products -->
+                <div class="bg-surface-900 border border-surface-800 rounded-xl p-6 shadow-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-base font-semibold text-surface-100">Productos Más Vendidos</h2>
+                        <span class="text-xs text-surface-500">Ranking por unidades</span>
+                    </div>
+                    @if (topProductos.Count > 0)
                     {
-                        <table class="w-full text-xs">
-                            <thead>
-                                <tr class="border-b border-surface-800">
-                                    <th class="text-left py-2 text-surface-400 font-medium">N° Comprobante</th>
-                                    <th class="text-left py-2 text-surface-400 font-medium">Fecha</th>
-                                    <th class="text-left py-2 text-surface-400 font-medium">Cliente</th>
-                                    <th class="text-center py-2 text-surface-400 font-medium">Pago</th>
-                                    <th class="text-right py-2 text-surface-400 font-medium">Total</th>
-                                    <th class="text-right py-2 text-surface-400 font-medium">Ticket</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var v in ventas)
-                                {
-                                    <tr class="border-b border-surface-800/50 hover:bg-surface-850/50 transition-colors">
-                                        <td class="py-2.5 font-mono font-bold text-surface-200">
-                                            <span class="px-1.5 py-0.5 rounded text-[10px] mr-1 @GetTipoBadge(v.TipoComprobante)">
-                                                @(v.TipoComprobante == TipoComprobante.Boleta ? "BOL" : "TCK")
-                                            </span>
-                                            @v.NumeroComprobante
-                                        </td>
-                                        <td class="py-2.5 text-surface-400">@v.Fecha.ToString("dd/MM HH:mm")</td>
-                                        <td class="py-2.5 text-surface-300 max-w-[120px] truncate">@v.ClienteNombre</td>
-                                        <td class="py-2.5 text-center">
-                                            <span class="px-2 py-0.5 text-[10px] rounded-full @GetPaymentBadge(v.MetodoPago)">@v.MetodoPago</span>
-                                        </td>
-                                        <td class="py-2.5 text-right text-surface-100 font-mono font-semibold">S/ @v.Total.ToString("N2")</td>
-                                        <td class="py-2.5 text-right">
-                                            <button @onclick="() => selectedVenta = v"
-                                                    class="px-2 py-1 bg-surface-800 hover:bg-surface-700 text-primary-300 rounded text-[11px] font-medium transition-colors">
-                                                Ver
-                                            </button>
-                                        </td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
+                        <div class="space-y-3.5 max-h-[380px] overflow-y-auto pr-1">
+                            @for (int i = 0; i < topProductos.Count; i++)
+                            {
+                                var p = topProductos[i];
+                                var maxQty = topProductos.First().CantidadVendida;
+                                var barWidth = maxQty > 0 ? (double)(p.CantidadVendida / maxQty * 100) : 0;
+                                <div>
+                                    <div class="flex items-center justify-between mb-1 text-xs">
+                                        <span class="text-surface-200 font-medium truncate max-w-[200px]">
+                                            <span class="text-surface-500 mr-1.5 font-mono">#@(i + 1)</span> @p.ProductoNombre
+                                        </span>
+                                        <span class="font-mono text-surface-300">
+                                            <strong>@p.CantidadVendida</strong> unid. — <span class="text-emerald-400">S/ @p.TotalVendido.ToString("N2")</span>
+                                        </span>
+                                    </div>
+                                    <div class="w-full bg-surface-800 rounded-full h-1.5">
+                                        <div class="h-1.5 rounded-full bg-gradient-to-r from-primary-600 to-primary-400" style="width: @barWidth%"></div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
                     }
                     else
                     {
-                        <p class="text-center py-6 text-surface-500 text-sm">No hay ventas en el periodo seleccionado</p>
+                        <div class="text-center py-12 text-surface-500 text-xs">
+                            No hay productos vendidos en este periodo
+                        </div>
+                    }
+                </div>
+
+                <!-- Sales list -->
+                <div class="bg-surface-900 border border-surface-800 rounded-xl p-6 shadow-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-base font-semibold text-surface-100">Ventas & Comprobantes Emitidos</h2>
+                        <span class="text-xs text-surface-500">@ventas.Count total</span>
+                    </div>
+                    <div class="max-h-[380px] overflow-y-auto">
+                        @if (ventas.Count > 0)
+                        {
+                            <table class="w-full text-xs">
+                                <thead class="sticky top-0 bg-surface-900 border-b border-surface-800 text-surface-400">
+                                    <tr>
+                                        <th class="text-left py-2">Comprobante</th>
+                                        <th class="text-left py-2">Fecha</th>
+                                        <th class="text-left py-2">Cliente</th>
+                                        <th class="text-right py-2">Total</th>
+                                        <th class="text-center py-2">Estado</th>
+                                        <th class="text-right py-2">Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var v in ventas)
+                                    {
+                                        <tr class="border-b border-surface-800/40 hover:bg-surface-850/50 transition-colors @(v.Estado == EstadoVenta.Anulada ? "opacity-60 bg-rose-950/10" : "")">
+                                            <td class="py-2 font-mono font-bold text-surface-200">
+                                                <span class="px-1 py-0.2 rounded text-[9px] mr-1 @GetTipoBadge(v.TipoComprobante)">
+                                                    @(v.TipoComprobante == TipoComprobante.Boleta ? "BOL" : "TCK")
+                                                </span>
+                                                @v.NumeroComprobante
+                                            </td>
+                                            <td class="py-2 text-surface-400">@v.Fecha.ToString("dd/MM HH:mm")</td>
+                                            <td class="py-2 text-surface-300 max-w-[100px] truncate">@v.ClienteNombre</td>
+                                            <td class="py-2 text-right text-surface-100 font-mono font-semibold">S/ @v.Total.ToString("N2")</td>
+                                            <td class="py-2 text-center">
+                                                @if (v.Estado == EstadoVenta.Anulada)
+                                                {
+                                                    <span class="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-rose-500/20 text-rose-400 border border-rose-500/30">
+                                                        Anulada
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-emerald-500/10 text-emerald-400">
+                                                        Emitida
+                                                    </span>
+                                                }
+                                            </td>
+                                            <td class="py-2 text-right">
+                                                <button @onclick="() => selectedVenta = v"
+                                                        class="px-2 py-0.5 bg-surface-800 hover:bg-surface-700 text-primary-300 rounded text-[10px] font-medium transition-colors">
+                                                    Ver
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        }
+                        else
+                        {
+                            <p class="text-center py-12 text-surface-500 text-xs">No hay ventas registradas en el periodo</p>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <!-- Tab 2: Historial de Devoluciones & Anulaciones (Stock Reintegrado) -->
+            <div class="space-y-6">
+                <!-- Summary Metrics (Devoluciones) -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="bg-surface-900 border border-rose-500/20 rounded-xl p-5 shadow-sm">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs text-rose-400 font-semibold uppercase tracking-wider">Devoluciones / Anulaciones</span>
+                            <span class="p-2 rounded-lg bg-rose-500/10 text-rose-400">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" /></svg>
+                            </span>
+                        </div>
+                        <p class="text-3xl font-bold text-surface-50 font-mono">@resumenDevoluciones.TotalDevoluciones</p>
+                        <p class="text-xs text-surface-400 mt-1">ventas anuladas y devueltas</p>
+                    </div>
+
+                    <div class="bg-surface-900 border border-rose-500/20 rounded-xl p-5 shadow-sm">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs text-rose-400 font-semibold uppercase tracking-wider">Monto Total Reembolsado</span>
+                            <span class="p-2 rounded-lg bg-rose-500/10 text-rose-400">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
+                            </span>
+                        </div>
+                        <p class="text-3xl font-bold text-rose-400 font-mono">S/ @resumenDevoluciones.MontoTotalDevuelto.ToString("N2")</p>
+                        <p class="text-xs text-surface-400 mt-1">dinero reembolsado / fiado revertido</p>
+                    </div>
+
+                    <div class="bg-surface-900 border border-emerald-500/20 rounded-xl p-5 shadow-sm">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs text-emerald-400 font-semibold uppercase tracking-wider">Stock Reintegrado al Almacén</span>
+                            <span class="p-2 rounded-lg bg-emerald-500/10 text-emerald-400">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z" /></svg>
+                            </span>
+                        </div>
+                        <p class="text-3xl font-bold text-emerald-400 font-mono">@resumenDevoluciones.UnidadesRestauradas.ToString("G29")</p>
+                        <p class="text-xs text-surface-400 mt-1">unidades reincorporadas al inventario</p>
+                    </div>
+                </div>
+
+                <!-- Returns List Table & Search Filter -->
+                <div class="bg-surface-900 border border-surface-800 rounded-xl p-5 space-y-4 shadow-sm">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div>
+                            <h2 class="text-base font-bold text-surface-100 flex items-center gap-2">
+                                <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+                                Auditoría de Devoluciones & Cancelaciones
+                            </h2>
+                            <p class="text-xs text-surface-400">Registro cronológico de ventas anuladas con los motivos de devolución y productos restituidos</p>
+                        </div>
+                        <div class="w-full sm:w-72">
+                            <input type="text" @bind="filtroDevolucion" @bind:event="oninput"
+                                   placeholder="Buscar por N° comprobante, cliente o motivo..."
+                                   class="w-full px-3 py-1.5 bg-surface-800 border border-surface-700 rounded-lg text-surface-100 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                        </div>
+                    </div>
+
+                    @if (FilteredDevoluciones.Count == 0)
+                    {
+                        <div class="flex flex-col items-center justify-center py-12 text-surface-500 bg-surface-850/50 rounded-xl border border-surface-800">
+                            <svg class="w-10 h-10 mb-2 text-emerald-500/60" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                            </svg>
+                            <p class="text-sm text-surface-300 font-medium">Sin devoluciones en este periodo</p>
+                            <p class="text-xs text-surface-500">No se han registrado anulaciones de comprobantes ni devoluciones de stock.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-xs text-left">
+                                <thead class="bg-surface-950/60 text-surface-400 font-semibold border-b border-surface-800 uppercase tracking-wider">
+                                    <tr>
+                                        <th class="py-3 px-3">Comprobante</th>
+                                        <th class="py-3 px-3">Fecha & Cajero</th>
+                                        <th class="py-3 px-3">Cliente</th>
+                                        <th class="py-3 px-3">Motivo de Devolución</th>
+                                        <th class="py-3 px-3">Productos Restituidos al Stock</th>
+                                        <th class="py-3 px-3 text-right">Monto Devuelto</th>
+                                        <th class="py-3 px-3 text-right">Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-surface-800/60">
+                                    @foreach (var d in FilteredDevoluciones)
+                                    {
+                                        <tr class="hover:bg-surface-850/60 transition-colors">
+                                            <!-- Comprobante -->
+                                            <td class="py-3 px-3 font-mono font-bold">
+                                                <div class="flex items-center gap-1.5">
+                                                    <span class="px-1.5 py-0.5 rounded text-[9px] @GetTipoBadge(d.TipoComprobante)">
+                                                        @(d.TipoComprobante == TipoComprobante.Boleta ? "BOL" : "TCK")
+                                                    </span>
+                                                    <span class="text-rose-400">@d.NumeroComprobante</span>
+                                                </div>
+                                            </td>
+
+                                            <!-- Fecha y Cajero -->
+                                            <td class="py-3 px-3">
+                                                <p class="text-surface-200">@d.Fecha.ToString("dd/MM/yyyy HH:mm")</p>
+                                                <p class="text-[10px] text-surface-500">Caja: @(d.Usuario?.Nombre ?? "Principal")</p>
+                                            </td>
+
+                                            <!-- Cliente -->
+                                            <td class="py-3 px-3 text-surface-300 max-w-[140px] truncate">
+                                                @d.ClienteNombre
+                                                @if (!string.IsNullOrEmpty(d.ClienteDocumento))
+                                                {
+                                                    <span class="block text-[10px] text-surface-500 font-mono">@d.ClienteDocumento</span>
+                                                }
+                                            </td>
+
+                                            <!-- Motivo -->
+                                            <td class="py-3 px-3 max-w-[200px]">
+                                                <div class="inline-flex items-center gap-1 px-2 py-1 bg-rose-500/10 border border-rose-500/20 text-rose-300 rounded text-[11px]">
+                                                    <svg class="w-3 h-3 text-rose-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" /></svg>
+                                                    <span class="truncate">@(string.IsNullOrWhiteSpace(d.MotivoAnulacion) ? "Cancelación a pedido del cliente" : d.MotivoAnulacion)</span>
+                                                </div>
+                                            </td>
+
+                                            <!-- Productos Devueltos al Stock -->
+                                            <td class="py-3 px-3">
+                                                <div class="flex flex-wrap gap-1 max-w-[280px]">
+                                                    @foreach (var item in d.Detalles)
+                                                    {
+                                                        <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-surface-800 text-surface-300 text-[10px] border border-surface-700">
+                                                            <strong class="text-emerald-400">@item.Cantidad.ToString("G29")x</strong>
+                                                            <span class="truncate max-w-[120px]">@item.Producto.Nombre</span>
+                                                        </span>
+                                                    }
+                                                </div>
+                                            </td>
+
+                                            <!-- Monto Devuelto -->
+                                            <td class="py-3 px-3 text-right font-mono font-bold text-rose-400 text-sm">
+                                                S/ @d.Total.ToString("N2")
+                                            </td>
+
+                                            <!-- Acciones -->
+                                            <td class="py-3 px-3 text-right">
+                                                <button @onclick="() => selectedVenta = d"
+                                                        class="px-2.5 py-1.5 bg-surface-800 hover:bg-surface-700 text-primary-300 hover:text-primary-200 rounded-lg text-xs font-medium transition-colors inline-flex items-center gap-1 shadow-sm">
+                                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>
+                                                    <span>Ver Ticket</span>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
                     }
                 </div>
             </div>
-        </div>
+        }
     }
 </div>
 
+<!-- Receipt Modal with Void Watermark and Details -->
 @if (selectedVenta != null)
 {
     <ComprobanteModal Venta="selectedVenta"
@@ -139,13 +361,27 @@
 }
 
 @code {
+    private string activeTab = "ventas"; // "ventas" | "devoluciones"
     private DateTime fechaDesde = DateTime.Today.AddDays(-30);
     private DateTime fechaHasta = DateTime.Today;
     private List<Venta> ventas = new();
+    private List<Venta> devoluciones = new();
     private List<ProductoVendido> topProductos = new();
     private GananciaBruta ganancia = new();
+    private ResumenDevoluciones resumenDevoluciones = new();
     private Venta? selectedVenta;
     private bool loaded;
+    private string filtroDevolucion = "";
+
+    private List<Venta> ventasActivas => ventas.Where(v => v.Estado == EstadoVenta.Emitida).ToList();
+
+    private List<Venta> FilteredDevoluciones => devoluciones.Where(d =>
+        string.IsNullOrWhiteSpace(filtroDevolucion) ||
+        d.NumeroComprobante.Contains(filtroDevolucion, StringComparison.OrdinalIgnoreCase) ||
+        d.ClienteNombre.Contains(filtroDevolucion, StringComparison.OrdinalIgnoreCase) ||
+        (d.MotivoAnulacion != null && d.MotivoAnulacion.Contains(filtroDevolucion, StringComparison.OrdinalIgnoreCase)) ||
+        (d.Usuario != null && d.Usuario.Nombre.Contains(filtroDevolucion, StringComparison.OrdinalIgnoreCase))
+    ).ToList();
 
     protected override async Task OnInitializedAsync()
     {
@@ -156,9 +392,39 @@
     private async Task LoadReports()
     {
         ventas = await ReporteSvc.GetVentasPorRangoAsync(fechaDesde, fechaHasta);
+        devoluciones = await ReporteSvc.GetDevolucionesPorRangoAsync(fechaDesde, fechaHasta);
+        resumenDevoluciones = await ReporteSvc.GetResumenDevolucionesAsync(fechaDesde, fechaHasta);
         topProductos = await ReporteSvc.GetProductosMasVendidosAsync(fechaDesde, fechaHasta);
         ganancia = await ReporteSvc.GetGananciaBrutaAsync(fechaDesde, fechaHasta);
         loaded = true;
+    }
+
+    private async Task SetDatePresetToday()
+    {
+        fechaDesde = DateTime.Today;
+        fechaHasta = DateTime.Today;
+        await LoadReports();
+    }
+
+    private async Task SetDatePresetLast7Days()
+    {
+        fechaDesde = DateTime.Today.AddDays(-7);
+        fechaHasta = DateTime.Today;
+        await LoadReports();
+    }
+
+    private async Task SetDatePresetThisMonth()
+    {
+        fechaDesde = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+        fechaHasta = DateTime.Today;
+        await LoadReports();
+    }
+
+    private async Task SetDatePresetLast30Days()
+    {
+        fechaDesde = DateTime.Today.AddDays(-30);
+        fechaHasta = DateTime.Today;
+        await LoadReports();
     }
 
     private async Task HandleVentaUpdated(Venta v)
@@ -168,15 +434,8 @@
 
     private string GetTipoBadge(TipoComprobante t) => t switch
     {
-        TipoComprobante.Boleta => "bg-primary-500/20 text-primary-400",
-        _ => "bg-amber-500/20 text-amber-400"
-    };
-
-    private string GetPaymentBadge(MetodoPago m) => m switch
-    {
-        MetodoPago.Efectivo => "bg-emerald-500/10 text-emerald-400",
-        MetodoPago.YapePlin => "bg-purple-500/10 text-purple-400",
-        MetodoPago.Tarjeta => "bg-blue-500/10 text-blue-400",
-        _ => "bg-surface-700 text-surface-400"
+        TipoComprobante.Boleta => "bg-primary-500/20 text-primary-400 border border-primary-500/30",
+        _ => "bg-amber-500/20 text-amber-400 border border-amber-500/30"
     };
 }
+

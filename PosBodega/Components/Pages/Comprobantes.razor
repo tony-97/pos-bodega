@@ -153,8 +153,16 @@
                                 </td>
 
                                 <!-- Cliente -->
-                                <td class="py-3 px-3 font-medium text-surface-200 max-w-[160px] truncate">
-                                    @v.ClienteNombre
+                                <td class="py-3 px-3 font-medium text-surface-200 max-w-[180px]">
+                                    <div class="flex items-center gap-1.5 truncate">
+                                        @if (v.ClienteId.HasValue)
+                                        {
+                                            <span class="px-1 py-0.2 bg-surface-800 border border-surface-700 text-primary-400 rounded text-[9px] font-mono font-bold shrink-0">
+                                                #@v.ClienteId
+                                            </span>
+                                        }
+                                        <span class="truncate">@v.ClienteNombre</span>
+                                    </div>
                                 </td>
 
                                 <!-- Documento DNI/RUC -->
@@ -249,7 +257,8 @@
         (string.IsNullOrEmpty(filtroBusqueda) ||
          v.NumeroComprobante.Contains(filtroBusqueda, StringComparison.OrdinalIgnoreCase) ||
          v.ClienteNombre.Contains(filtroBusqueda, StringComparison.OrdinalIgnoreCase) ||
-         (v.ClienteDocumento != null && v.ClienteDocumento.Contains(filtroBusqueda))) &&
+         (v.ClienteDocumento != null && v.ClienteDocumento.Contains(filtroBusqueda)) ||
+         (v.ClienteId.HasValue && v.ClienteId.Value.ToString() == filtroBusqueda.Trim().TrimStart('#'))) &&
         (string.IsNullOrEmpty(filtroTipo) || v.TipoComprobante.ToString() == filtroTipo) &&
         (string.IsNullOrEmpty(filtroEstado) ||
          (filtroEstado == "Emitida" && v.Estado == EstadoVenta.Emitida && !v.ComprobanteDestinoId.HasValue) ||

@@ -22,6 +22,9 @@ public class ReporteService
             .Where(v => v.Fecha >= hoy && v.Fecha < manana)
             .ToListAsync();
 
+        var ventasValidas = ventasHoy.Where(v => v.Estado == EstadoVenta.Emitida).ToList();
+        var devolucionesHoy = ventasHoy.Where(v => v.Estado == EstadoVenta.Anulada).ToList();
+
         var totalFiados = await _db.Clientes
             .Where(c => c.Activo && c.SaldoDeudor > 0)
             .SumAsync(c => c.SaldoDeudor);
@@ -41,8 +44,10 @@ public class ReporteService
 
         return new ResumenDiario
         {
-            VentasDelDia = ventasHoy.Count,
-            TotalVentasDelDia = ventasHoy.Sum(v => v.Total),
+            VentasDelDia = ventasValidas.Count,
+            TotalVentasDelDia = ventasValidas.Sum(v => v.Total),
+            DevolucionesDelDia = devolucionesHoy.Count,
+            TotalDevolucionesDelDia = devolucionesHoy.Sum(v => v.Total),
             TotalFiados = totalFiados,
             ProductosStockBajo = productosStockBajo,
             ProductosPorVencer = productosPorVencer,
@@ -62,12 +67,39 @@ public class ReporteService
             .ToListAsync();
     }
 
+    public async Task<List<Venta>> GetDevolucionesPorRangoAsync(DateTime desde, DateTime hasta)
+    {
+        return await _db.Ventas
+            .Include(v => v.Cliente)
+            .Include(v => v.Usuario)
+            .Include(v => v.Detalles)
+                .ThenInclude(d => d.Producto)
+            .Where(v => v.Fecha >= desde && v.Fecha <= hasta.AddDays(1) && v.Estado == EstadoVenta.Anulada)
+            .OrderByDescending(v => v.Fecha)
+            .ToListAsync();
+    }
+
+    public async Task<ResumenDevoluciones> GetResumenDevolucionesAsync(DateTime desde, DateTime hasta)
+    {
+        var devoluciones = await _db.Ventas
+            .Include(v => v.Detalles)
+            .Where(v => v.Fecha >= desde && v.Fecha <= hasta.AddDays(1) && v.Estado == EstadoVenta.Anulada)
+            .ToListAsync();
+
+        return new ResumenDevoluciones
+        {
+            TotalDevoluciones = devoluciones.Count,
+            MontoTotalDevuelto = devoluciones.Sum(v => v.Total),
+            UnidadesRestauradas = devoluciones.SelectMany(v => v.Detalles).Sum(d => d.Cantidad)
+        };
+    }
+
     public async Task<List<ProductoVendido>> GetProductosMasVendidosAsync(DateTime desde, DateTime hasta)
     {
         return await _db.VentaDetalles
             .Include(d => d.Producto)
             .Include(d => d.Venta)
-            .Where(d => d.Venta.Fecha >= desde && d.Venta.Fecha <= hasta.AddDays(1))
+            .Where(d => d.Venta.Fecha >= desde && d.Venta.Fecha <= hasta.AddDays(1) && d.Venta.Estado != EstadoVenta.Anulada)
             .GroupBy(d => new { d.ProductoId, d.Producto.Nombre })
             .Select(g => new ProductoVendido
             {
@@ -85,7 +117,7 @@ public class ReporteService
         var ventas = await _db.VentaDetalles
             .Include(d => d.Producto)
             .Include(d => d.Venta)
-            .Where(d => d.Venta.Fecha >= desde && d.Venta.Fecha <= hasta.AddDays(1))
+            .Where(d => d.Venta.Fecha >= desde && d.Venta.Fecha <= hasta.AddDays(1) && d.Venta.Estado != EstadoVenta.Anulada)
             .ToListAsync();
 
         var ingresos = ventas.Sum(d => d.Subtotal);
@@ -105,10 +137,19 @@ public class ResumenDiario
 {
     public int VentasDelDia { get; set; }
     public decimal TotalVentasDelDia { get; set; }
+    public int DevolucionesDelDia { get; set; }
+    public decimal TotalDevolucionesDelDia { get; set; }
     public decimal TotalFiados { get; set; }
     public int ProductosStockBajo { get; set; }
     public int ProductosPorVencer { get; set; }
     public int ProductosVencidos { get; set; }
+}
+
+public class ResumenDevoluciones
+{
+    public int TotalDevoluciones { get; set; }
+    public decimal MontoTotalDevuelto { get; set; }
+    public decimal UnidadesRestauradas { get; set; }
 }
 
 public class ProductoVendido
